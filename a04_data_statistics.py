@@ -8,7 +8,6 @@ from datetime import datetime, date
 from warnings import filterwarnings
 import numpy as np
 from dateutil.relativedelta import relativedelta
-from schedule import *
 from utils.config import get_datatype
 from utils.get_index_by_lonlat import get_point_index_by_lon_lat, get_area_index_by_lon_lat
 from utils.data import DemLoader
