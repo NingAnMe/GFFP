@@ -5,6 +5,7 @@
 import os
 from utils.path import AID_PATH
 
+
 DB_PATH = os.path.join(AID_PATH, 'db.db')
 SQLLITE_DB = r'sqlite:///{}'.format(DB_PATH)
 
@@ -22,3 +23,8 @@ def print_config():
     print('DEM_HDF == {}'.format(DEM_HDF))
     print('COEF_TXT == {}'.format(COEF_TXT))
     print('POOR_XLSX == {}'.format(POOR_XLSX))
+
+
+def get_datatype():
+    datatype = ['GHI', 'DBI', 'DHI', 'GTI']
+    return datatype
