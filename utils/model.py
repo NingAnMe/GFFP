@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2020-07-14 21:23
 # @Author  : NingAnMe <ninganme@qq.com>
+import os
+from datetime import date
 from collections import defaultdict
 import json
 
@@ -10,7 +12,8 @@ from sqlalchemy import Column, Integer, String, DateTime, Float, ForeignKey, Dat
 from sqlalchemy.orm import relationship
 
 from utils.database import *
-from datetime import date
+from utils.path import *
+from utils.config import DB_PATH
 
 
 class Station(Base):
@@ -19,13 +22,27 @@ class Station(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     station = Column(String)
     date = Column(Date)
+    year = Column(String)
+    month = Column(String)
+    sh = Column(Integer)
+    sr = Column(Integer)
+
+    EHR = Column(Float)
     GHI = Column(Float)
     DBI = Column(Float)
     DHI = Column(Float)
     GTI = Column(Float)
-    H0 = Column(Float)
-    H20 = Column(Float)
-    H25 = Column(Float)
+    sdir = Column(Float)
+    sdif = Column(Float)
+    sref = Column(Float)
+
+    lat = Column(Float)
+    lon = Column(Float)
+    height = Column(Float)
+    a = Column(Float)
+    b = Column(Float)
+    c = Column(Float)
+    d = Column(Float)
 
     @classmethod
     def str2datetime(cls, date_str):
@@ -67,6 +84,10 @@ class Station(Base):
     @classmethod
     def query_by_station(cls, session, station):
         return session.query(Station).filter(Station.station == station.strip()).all()
+
+    @classmethod
+    def query_by_date(cls, session, dt):
+        return session.query(Station).filter(Station.date == dt).all()
 
 
 class Ssi(Base):
@@ -114,6 +135,26 @@ class Ssi(Base):
     @classmethod
     def query(cls, session):
         return session.query(Ssi).all()
+
+    @classmethod
+    def get_ssi_info_by_file(cls, file_in):
+        """
+        :param file_in: station_id year month sh sr
+        :return:
+        """
+        dtype = {
+            0: str,
+            1: str,
+            2: str,
+            3: int,
+            4: int,
+        }
+        try:
+            data = pd.read_csv(file_in, sep=r'\s+', index_col=False, header=None, dtype=dtype)
+        except pd.errors.EmptyDataError:
+            return
+        data.columns = ['station', 'year', 'month', 'sh', 'sr']
+        return data
 
 
 class Coef(Base):
@@ -167,6 +208,103 @@ class Coef(Base):
     def query(cls, session):
         return session.query(Coef).all()
 
+    @classmethod
+    def get_coef_info_by_file(cls, file_in):
+        """
+        :param file_in:
+        :return:
+        """
+        dtype = {
+            0: str,
+            1: float,
+            2: float,
+            3: float,
+            4: str,
+            5: float,
+            6: float,
+            7: float,
+            8: float,
+        }
+        data = pd.read_csv(file_in, sep=r'\s+', index_col=False, header=None, dtype=dtype)
+        data.columns = ['station', 'lat', 'lon', 'height', 'month', 'a', 'b', 'c', 'd']
+        return data
+
+
+class Poor(Base):
+    __tablename__ = "poor"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    code = Column(String)
+    sheng = Column(String)
+    shi = Column(String)
+    xian = Column(String)
+    zhen = Column(String)
+    cun = Column(String)
+    lat = Column(Float)
+    lon = Column(Float)
+
+    @classmethod
+    def str2datetime(cls, date_str):
+        date_str = str(date_str)
+        try:
+            return datetime.strptime(date_str, '%Y-%m-%d')
+        except Exception as why:
+            str(why)
+            return None
+
+    @classmethod
+    def add(cls, session, data):
+        if isinstance(data, Poor):
+            session.add(data)
+        elif isinstance(data, dict):
+            data = Poor(**data)
+            session.add(data)
+        elif isinstance(data, list):
+            session.bulk_insert_mappings(Poor, data)
+        else:
+            print('type error')
+
+    @classmethod
+    def update(cls, session, data):
+        if isinstance(data, Poor):
+            session.update(data)
+        elif isinstance(data, dict):
+            data = Poor(**data)
+            session.update(data)
+        elif isinstance(data, list):
+            session.bulk_update_mappings(Poor, data)
+        else:
+            print('type error')
+
+    @classmethod
+    def query(cls, session):
+        return session.query(Poor).all()
+
+    @classmethod
+    def excil2db_poor(cls, ex):
+        exop = pd.read_excel(ex)
+        va = exop.values
+        with session_scope() as session:
+            ds = []
+            for data_m in va:
+                d = {
+                    'code': str(data_m[1]),
+                    'sheng': str(data_m[2]),
+                    'shi': str(data_m[3]),
+                    'xian': str(data_m[4]),
+                    'zhen': str(data_m[5]),
+                    'cun': str(data_m[6]),
+                    'lat': float(data_m[7]),
+                    'lon': float(data_m[8]),
+                }
+                ds.append(d)
+            Poor.add(session, ds)
+            rows = Poor.query(session)
+            for row in rows:
+                print(row)
+                print(row.to_dict()
+                      )
+
 
 def txt2db_ssi(file_in):
     data = []
@@ -193,7 +331,7 @@ def txt2db_ssi(file_in):
 def txt2db_coef():
     data = []
 
-    with open('D:\project\py\gz\ky\gffp\提供样例数据\提供样例数据\sta_mon_a_b_ok.txt', "r") as f:
+    with open(os.path.join(AID_PATH, 'sta_mon_a_b_ok.txt'), "r") as f:
         for line in f.readlines():
             temp = line.split()
             data.append(temp)
@@ -284,10 +422,19 @@ def t_Station():
             print(row.to_dict())
 
 
+if not os.path.isfile(DB_PATH):
+    print('数据库不存在，创建数据库:{}'.format(DB_PATH))
+    Base.metadata.create_all(engine)
+    if os.path.isfile(DB_PATH):
+        print('成功创建数据库：{}'.format(DB_PATH))
+    else:
+        raise FileExistsError('创建数据库失败')
+
+
 if __name__ == '__main__':
     Base.metadata.create_all(engine)
     # t_Station()
     # test_PddSku()
     # txt2db_coef()
-    file_in = 'D:\project\py\gz\ky\gffp\提供样例数据\提供样例数据\\2019_rz.txt'
-    txt2db_ssi(file_in)
+    # file_in = 'D:\project\py\gz\ky\gffp\提供样例数据\提供样例数据\\2019_rz.txt'
+    # txt2db_ssi(file_in)

@@ -49,7 +49,7 @@ def get_point_index_kdtree(lon, lat, idx, ck, pre_dist=0.04):
         return
 
 
-def get_point_index_by_lon_lat(lons, lats, xllcorner=69.9951, yllcorner=9.995, res=0.01):
+def get_point_index_by_lon_lat(lons, lats, xllcorner=69.9951, yllcorner=9.995, res=0.01, nrows=4501):
     """
     通过经纬度获取点的index
     :param lons: np.array 点的经度
@@ -57,12 +57,13 @@ def get_point_index_by_lon_lat(lons, lats, xllcorner=69.9951, yllcorner=9.995, r
     :param xllcorner:  float 列起始位置经度
     :param yllcorner: float 行起始位置纬度
     :param res: float 分辨率
+    :param nrows: int 总的行数
     :return: np.array 行列号
     """
-    rows = (lons - yllcorner) // res
+    rows = (yllcorner - lats) // res + nrows - 1
     rows.astype(np.int)
 
-    cols = (lats - xllcorner) // res
+    cols = (lons - xllcorner) // res
     cols.astype(np.int)
     return rows, cols
 

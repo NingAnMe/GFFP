@@ -2,9 +2,23 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2020-06-15 17:04
 # @Author  : NingAnMe <ninganme@qq.com>
-
+import os
 from utils.path import AID_PATH
 
-sqlite_db = r'sqlite:///{}\db.db'.format(AID_PATH)
-order_file_path = r'C:\D\OneDrive\Business\库存处理订单'
-json_file_path = r'C:\D\OneDrive\Business\json数据'
+DB_PATH = os.path.join(AID_PATH, 'db.db')
+SQLLITE_DB = r'sqlite:///{}'.format(DB_PATH)
+
+# 辅助文件
+DEM_TXT = os.path.join(AID_PATH, 'D_DEM.txt')
+DEM_HDF = os.path.join(AID_PATH, 'D_DEM.hdf')
+
+COEF_TXT = os.path.join(AID_PATH, 'sta_mon_a_b_ok.txt')
+POOR_XLSX = os.path.join(AID_PATH, '贫困村站点经纬度.xlsx')
+
+
+def print_config():
+    print('SQLLITE_DB == {}'.format(SQLLITE_DB))
+    print('DEM_TXT == {}'.format(DEM_TXT))
+    print('DEM_HDF == {}'.format(DEM_HDF))
+    print('COEF_TXT == {}'.format(COEF_TXT))
+    print('POOR_XLSX == {}'.format(POOR_XLSX))

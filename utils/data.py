@@ -3,15 +3,19 @@
 # @Time    : 2020-11-17 9:29
 # @Author  : NingAnMe <ninganme@qq.com>
 from utils.path import *
-from utils.hdf5 import *
+from utils.config import DEM_TXT, DEM_HDF
+from utils.hdf5 import get_hdf5_data, write_hdf5_and_compress
+
 import os
+
+import numpy as np
 
 
 class DemLoader:
 
     def __init__(self):
-        self.file_txt = os.path.join(AID_PATH, 'D_DEM.txt')
-        self.file_hdf = os.path.join(AID_PATH, 'D_DEM.hdf')
+        self.file_txt = os.path.join(DEM_TXT)
+        self.file_hdf = os.path.join(DEM_HDF)
         if not os.path.isfile(self.file_hdf):
             self.to_hdf5()
 
@@ -33,7 +37,7 @@ class DemLoader:
         xllcorner = 69.9951
         yllcorner = 9.995
         cellsize = 0.01
-        laty = np.arange(0, nrows) * cellsize + yllcorner
+        laty = np.arange(nrows - 1, 0 - 1, -1) * cellsize + yllcorner
         lonx = np.arange(0, ncols) * cellsize + xllcorner
         lons, lats = np.meshgrid(lonx, laty)
 
