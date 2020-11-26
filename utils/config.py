@@ -5,6 +5,8 @@
 import os
 from utils.path import AID_PATH
 
+LONGITUDE_RANGE_China = [70, 140]
+LATITUDE_RANGE_China = [15, 55]
 
 DB_PATH = os.path.join(AID_PATH, 'db.db')
 SQLLITE_DB = r'sqlite:///{}'.format(DB_PATH)
