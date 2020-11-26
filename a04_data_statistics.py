@@ -226,7 +226,7 @@ def num_area(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatitu
         years_sum = years_sum_area(dateStart, dateEnd, data, row_min, row_max, col_min, col_max)
         if out_fi == 1:
             data_area_to_hdf(DATA_STAT, years_sum, lons, lats, dataType, date_str)
-        return years_sum
+        return years_sum, lons, lats
     elif task == 2:
         years_sum = years_sum_area(dateStart, dateEnd, data, row_min, row_max, col_min, col_max)
         year_data_list = []
@@ -236,7 +236,7 @@ def num_area(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatitu
         year_area_ave_dict = {'yearMean': year_area_ave, }
         if out_fi == 1:
             data_area_to_hdf(DATA_STAT, year_area_ave_dict, lons, lats, dataType, date_str)
-        return year_area_ave_dict
+        return year_area_ave_dict, lons, lats
     elif task == 3:
         years_sum = years_sum_area(dateStart, dateEnd, data, row_min, row_max, col_min, col_max)
         year_data_list = []
@@ -251,7 +251,7 @@ def num_area(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatitu
             year_jp_dict = {'yearAnomaly': year_jp_all, }
         if out_fi == 1:
             data_area_to_hdf(DATA_STAT, year_jp_all_dict, lons, lats, dataType, date_str)
-        return year_jp_all_dict
+        return year_jp_all_dict, lons, lats
 
 
 def get_date_start_end(date_start, date_end, data_type):
@@ -437,6 +437,8 @@ if __name__ == '__main__':
     parser.add_argument('--rightLongitude', '-r', help='右下角经度，47.302235', required=False)
     parser.add_argument('--rightLatitude', '-i', help='右下角经度，85.880519', required=False)
     args = parser.parse_args()
+
+
 
     if args.modeType == 'point':
         print(args.dataType, args.taskChoice, args.dateStart, args.dateEnd, args.leftLongitude, args.leftLatitude)
