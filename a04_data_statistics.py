@@ -156,13 +156,14 @@ def years_sum_area(dateStart, dateEnd, data, row_min, row_max, col_min, col_max)
     return years_num_p
 
 
-def num_point(dataType, task, dateStart, dateEnd, leftLongitude, leftLatitude, out_fi=1):
+def num_point(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatitude, out_fi=1):
     # 选择数据类型
     d_t = get_datatype()
     if dataType in d_t:
         datapath = "{}".format(dataType)
     else:
         return '数据类型错误！'
+    task = task_dict[str(taskChoice)]
     print(dataType)
     # 获取数据
     loa = np.array([float(leftLongitude), float(leftLatitude)])
@@ -200,9 +201,10 @@ def num_point(dataType, task, dateStart, dateEnd, leftLongitude, leftLatitude, o
         return year_jp_all_dict
 
 
-def num_area(dataType, task, dateStart, dateEnd, leftLongitude, leftLatitude,
+def num_area(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatitude,
              rightLongitude, rightLatitude, out_fi=1):
     d_t = get_datatype()
+    task = task_dict[str(taskChoice)]
     if dataType in d_t:
         datapath = "{}".format(dataType)
     else:
@@ -436,26 +438,15 @@ if __name__ == '__main__':
     parser.add_argument('--rightLatitude', '-i', help='右下角经度，85.880519', required=False)
     args = parser.parse_args()
 
-    # assert args.function.lower() in functions, '{}'.format(functions)
-    # assert args.resolution_type in resolution_types, '{}'.format(resolution_types)
-    # assert args.sat_sensor in sat_sensors, '{}'.format(sat_sensors)
-
-    # datetime_start = datetime.strptime(args.dateStart, '%Y')
-    # datetime_end = datetime.strptime(args.dateEnd, '%Y')
-    # dateEvery = datetime.strptime(args.dateEvery, '%Y%m%d')
-    data_type = args.dataType
-
-    task = task_dict[str(args.taskChoice)]
-    # date_str = datetime.now().strftime("%Y%m%d%H%M%S")
     if args.modeType == 'point':
-        print(args.dataType, task, args.dateStart, args.dateEnd, args.leftLongitude, args.leftLatitude)
-        n_p = num_point(args.dataType, task, args.dateStart, args.dateEnd, args.leftLongitude,
+        print(args.dataType, args.taskChoice, args.dateStart, args.dateEnd, args.leftLongitude, args.leftLatitude)
+        n_p = num_point(args.dataType, args.taskChoice, args.dateStart, args.dateEnd, args.leftLongitude,
                         args.leftLatitude)
         # print(n_p)
     elif args.modeType == 'area':
-        print(args.dataType, task, args.dateStart, args.dateEnd, args.leftLongitude,
+        print(args.dataType, args.taskChoice, args.dateStart, args.dateEnd, args.leftLongitude,
               args.leftLatitude, args.rightLongitude, args.rightLatitude)
-        n_a = num_area(args.dataType, task, args.dateStart, args.dateEnd, args.leftLongitude,
+        n_a = num_area(args.dataType, args.taskChoice, args.dateStart, args.dateEnd, args.leftLongitude,
                        args.leftLatitude, args.rightLongitude, args.rightLatitude)
         # print(n_a)
     # python3 a04_data_statistics.py -t GHI -m point  -c yearSum -s 2019 -e 2019 -l 113 -a 43
