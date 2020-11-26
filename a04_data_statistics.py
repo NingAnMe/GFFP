@@ -20,6 +20,10 @@ import h5py
 from collections import defaultdict
 from user_config import *
 
+task_dict = {
+    'yearSum': 1, 'yearMean': 2, 'yearAnomaly': 3, 'monthSum': 4, 'monthMean': 5, 'monthAnomaly': 6,
+    'seasonSum': 7, 'seasonMean': 8, 'seasonAnomaly': 9, 'quarterSum': 10, 'quarterMean': 11, 'quarterAnomaly': 12
+}
 '''
 1）输入单点经纬度，输出txt格式的数据；
 2）输入区域经纬度范围，输出
@@ -210,18 +214,16 @@ def num_area(dataType, task, dateStart, dateEnd, leftLongitude, leftLatitude,
     row_min, col_min = get_point_index_by_lon_lat(loa[0], loa[1])
     row_max, col_max = get_point_index_by_lon_lat(loa[2], loa[3])
     print('行列：', row_min, row_max, col_min, col_max)
-    data = get_data(dateStart, dateEnd, dataType)
+    data, lon, lat = get_data(dateStart, dateEnd, dataType)
     print('数据获取完毕')
-    print(data)
-    data_one_year_lon = data[int(dateStart)]
-    lon = data_one_year_lon['lon']
-    lat = data_one_year_lon['lat']
+    # print(data)
+    # 获取经纬
     lons = lon[int(row_min) - 1: int(row_max), int(col_min) - 1: int(col_max)]
     lats = lat[int(row_min) - 1: int(row_max), int(col_min) - 1: int(col_max)]
     if task == 1:
         years_sum = years_sum_area(dateStart, dateEnd, data, row_min, row_max, col_min, col_max)
         if out_fi == 1:
-            data_area_to_hdf(DATA_STAT, years_sum, lons, lats, date_str)
+            data_area_to_hdf(DATA_STAT, years_sum, lons, lats, dataType, date_str)
         return years_sum
     elif task == 2:
         years_sum = years_sum_area(dateStart, dateEnd, data, row_min, row_max, col_min, col_max)
@@ -231,7 +233,7 @@ def num_area(dataType, task, dateStart, dateEnd, leftLongitude, leftLatitude,
         year_area_ave = ave_a(year_data_list, int(dateEnd) - int(dateStart) + 1)
         year_area_ave_dict = {'yearMean': year_area_ave, }
         if out_fi == 1:
-            data_area_to_hdf(DATA_STAT, year_area_ave_dict, lons, lats, date_str)
+            data_area_to_hdf(DATA_STAT, year_area_ave_dict, lons, lats, dataType, date_str)
         return year_area_ave_dict
     elif task == 3:
         years_sum = years_sum_area(dateStart, dateEnd, data, row_min, row_max, col_min, col_max)
@@ -246,7 +248,7 @@ def num_area(dataType, task, dateStart, dateEnd, leftLongitude, leftLatitude,
             year_jp_all_dict[year] = year_jp_all
             year_jp_dict = {'yearAnomaly': year_jp_all, }
         if out_fi == 1:
-            data_area_to_hdf(DATA_STAT, year_jp_all_dict, lons, lats, date_str)
+            data_area_to_hdf(DATA_STAT, year_jp_all_dict, lons, lats, dataType, date_str)
         return year_jp_all_dict
 
 
@@ -283,15 +285,18 @@ def get_file_year(files):
 
 def get_hdf_list_data(files_one_year, path, data_type):
     hdf_data_list = []
+    a = 0
     for hdf in files_one_year:
+        a += 1
         data_path = os.path.join(DATA_1KM, data_type)
         file_hdf = '{}/{}'.format(data_path, hdf)
         print('file_hdf', file_hdf, data_type)
         data = get_hdf5_data(file_hdf, data_type, 1, 0, [-9000, 9000], np.nan)
         # print(file_hdf, data)
-        dem = DemLoader()
-        dem.file_hdf = file_hdf
-        lon, lat = dem.get_lon_lat()
+        if a == 1:
+            dem = DemLoader()
+            dem.file_hdf = file_hdf
+            lon, lat = dem.get_lon_lat()
         # print(lon, lat)
         hdf_data_list.append(data)
     return hdf_data_list, lon, lat
@@ -323,12 +328,10 @@ def get_data(date_start, date_end, data_type):
         data, lon, lat = get_hdf_list_data(files_one_year, data_path, data_type)
         result = {
             'data': data,
-            'lon': lon,
-            'lat': lat,
         }
         results_return[year] = result
         # write_hdf5_and_compress()
-    return results_return
+    return results_return, lon, lat
 
 
 def data_point_to_txt(path, data):
@@ -357,7 +360,7 @@ def data_point_to_txt(path, data):
         f.write(data_str)
 
 
-def data_area_to_hdf(path, data, lons, lats, date_str):
+def data_area_to_hdf(path, data, lons, lats, data_type, date_str):
     '''
     :param path:
     :param data: dict{
@@ -420,7 +423,10 @@ if __name__ == '__main__':
     parser.add_argument('--taskChoice', '-c',
                         help='时间：year, month, season, quarter   '
                              '任务: sum, mean, anomaly  '
-                             'yearSum, yearMean, yearAnomaly',
+                             'yearSum, yearMean, yearAnomaly,'
+                             'monthSum, monthMean, monthAnomaly,'
+                             'seasonSum, seasonMean, seasonAnomaly,'
+                             'quarterSum, quarterMean, quarterAnomaly,',
                         required=False)
     parser.add_argument('--dateStart', '-s', help='开始年份，YYYY(2019)', required=True)
     parser.add_argument('--dateEnd', '-e', help='结束年份，YYYY(2019)', required=True)
@@ -438,9 +444,7 @@ if __name__ == '__main__':
     # datetime_end = datetime.strptime(args.dateEnd, '%Y')
     # dateEvery = datetime.strptime(args.dateEvery, '%Y%m%d')
     data_type = args.dataType
-    task_dict = {
-        'yearSum': 1, 'yearMean': 2, 'yearAnomaly': 3, 'sa': 4, 'm': 5, 'd': 6
-    }
+
     task = task_dict[str(args.taskChoice)]
     # date_str = datetime.now().strftime("%Y%m%d%H%M%S")
     if args.modeType == 'point':
