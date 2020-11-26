@@ -34,8 +34,10 @@ def ave(sum, len):
 
 def ave_a(lis, li_len):
     print('开始求平均')
-    # print(len(lis[0]))
-    # print(len(lis[0][0]))
+    print(lis)
+    print(len(lis))
+    print(len(lis[0]))
+    print(len(lis[0][0]))
     sta, end = len(lis[0]), len(lis[0][0])
     sum_a = np.zeros((sta, end))
     # print(sum_a)
@@ -150,7 +152,7 @@ def years_sum_area(dateStart, dateEnd, data, row_min, row_max, col_min, col_max)
     return years_num_p
 
 
-def num_point(dataType, task, dateStart, dateEnd, leftLongitude, leftLatitude):
+def num_point(dataType, task, dateStart, dateEnd, leftLongitude, leftLatitude, out_fi=1):
     # 选择数据类型
     d_t = get_datatype()
     if dataType in d_t:
@@ -166,7 +168,8 @@ def num_point(dataType, task, dateStart, dateEnd, leftLongitude, leftLatitude):
     data = get_data(dateStart, dateEnd, dataType)
     if task == 1:
         years_sum = years_sum_point(dateStart, dateEnd, data, row, col)  # 获取年值
-        data_point_to_txt(DATA_STAT, years_sum)  # 输出至txt
+        if out_fi == 1:
+            data_point_to_txt(DATA_STAT, years_sum)  # 输出至txt
         return years_sum
     elif task == 2:
         years_sum = years_sum_point(dateStart, dateEnd, data, row, col)
@@ -175,7 +178,8 @@ def num_point(dataType, task, dateStart, dateEnd, leftLongitude, leftLatitude):
             year_data_list.append(year_sum)
         year_ave = ave(year_data_list, int(dateEnd) - int(dateStart) + 1)
         year_ave_dict = {'yearMean': year_ave, }
-        data_point_to_txt(DATA_STAT, year_ave_dict)  # 输出至txt
+        if out_fi == 1:
+            data_point_to_txt(DATA_STAT, year_ave_dict)  # 输出至txt
         return year_ave_dict
     elif task == 3:
         years_sum = years_sum_point(dateStart, dateEnd, data, row, col)
@@ -187,19 +191,20 @@ def num_point(dataType, task, dateStart, dateEnd, leftLongitude, leftLatitude):
         for year, year_sum in years_sum.items():
             year_jp_all = juping(year_sum, year_ave)
             year_jp_all_dict[year] = year_jp_all
-        data_point_to_txt(DATA_STAT, year_jp_all_dict)
+        if out_fi == 1:
+            data_point_to_txt(DATA_STAT, year_jp_all_dict)
         return year_jp_all_dict
 
 
-def num_area(dataType, task, dateStart, dateEnd, dateEvery, leftLongitude, leftLatitude,
-             rightLongitude, rightLatitude, date_str=datetime.now().strftime("%Y%m%d%H%M%S")):
+def num_area(dataType, task, dateStart, dateEnd, leftLongitude, leftLatitude,
+             rightLongitude, rightLatitude, out_fi=1):
     d_t = get_datatype()
     if dataType in d_t:
         datapath = "{}".format(dataType)
     else:
         return '数据类型错误！'
     print(dataType)
-
+    date_str = datetime.now().strftime("%Y%m%d%H%M%S")
     loa = np.array([float(leftLongitude), float(leftLatitude), float(rightLongitude), float(rightLatitude)])
     # row_min, row_max, col_min, col_max = get_area_index_by_lon_lat(loa[0], loa[1], loa[2], loa[3])  # !!！
     row_min, col_min = get_point_index_by_lon_lat(loa[0], loa[1])
@@ -215,7 +220,8 @@ def num_area(dataType, task, dateStart, dateEnd, dateEvery, leftLongitude, leftL
     lats = lat[int(row_min) - 1: int(row_max), int(col_min) - 1: int(col_max)]
     if task == 1:
         years_sum = years_sum_area(dateStart, dateEnd, data, row_min, row_max, col_min, col_max)
-        data_area_to_hdf(DATA_STAT, years_sum, lons, lats, date_str)
+        if out_fi == 1:
+            data_area_to_hdf(DATA_STAT, years_sum, lons, lats, date_str)
         return years_sum
     elif task == 2:
         years_sum = years_sum_area(dateStart, dateEnd, data, row_min, row_max, col_min, col_max)
@@ -224,20 +230,23 @@ def num_area(dataType, task, dateStart, dateEnd, dateEvery, leftLongitude, leftL
             year_data_list.append(year_sum)
         year_area_ave = ave_a(year_data_list, int(dateEnd) - int(dateStart) + 1)
         year_area_ave_dict = {'yearMean': year_area_ave, }
-        data_area_to_hdf(DATA_STAT, year_area_ave_dict, lons, lats, date_str)
+        if out_fi == 1:
+            data_area_to_hdf(DATA_STAT, year_area_ave_dict, lons, lats, date_str)
         return year_area_ave_dict
     elif task == 3:
         years_sum = years_sum_area(dateStart, dateEnd, data, row_min, row_max, col_min, col_max)
         year_data_list = []
         for key_, year_sum in years_sum.items():
             year_data_list.append(year_sum)
+        print()
         year_area_ave = ave_a(year_data_list, int(dateEnd) - int(dateStart) + 1)
         year_jp_all_dict = {}
         for year, year_sum in years_sum.items():
-            year_jp_all = juping_a(year_sum, year_ave)
+            year_jp_all = juping_a(year_sum, year_area_ave)
             year_jp_all_dict[year] = year_jp_all
             year_jp_dict = {'yearAnomaly': year_jp_all, }
-        data_area_to_hdf(DATA_STAT, year_jp_all_dict, lons, lats, date_str)
+        if out_fi == 1:
+            data_area_to_hdf(DATA_STAT, year_jp_all_dict, lons, lats, date_str)
         return year_jp_all_dict
 
 
@@ -343,7 +352,7 @@ def data_point_to_txt(path, data):
     dirs = os.path.join(path, 'Point_{}.txt'.format(data_type))
     if not os.path.exists(path):
         os.makedirs(path)
-    print(path)
+    print('finish{}'.format(path))
     with open(dirs, "w", encoding='utf-8') as f:
         f.write(data_str)
 
@@ -368,6 +377,7 @@ def data_area_to_hdf(path, data, lons, lats, date_str):
         if not os.path.exists(path):
             os.makedirs(path)
         write_hdf5_and_compress(datas, dirs)
+        print('finish{}'.format(path))
 
 
 filterwarnings("ignore")
@@ -437,14 +447,13 @@ if __name__ == '__main__':
         print(args.dataType, task, args.dateStart, args.dateEnd, args.leftLongitude, args.leftLatitude)
         n_p = num_point(args.dataType, task, args.dateStart, args.dateEnd, args.leftLongitude,
                         args.leftLatitude)
-        print(n_p)
+        # print(n_p)
     elif args.modeType == 'area':
-        date_str = datetime.now().strftime("%Y%m%d%H%M%S")
         print(args.dataType, task, args.dateStart, args.dateEnd, args.leftLongitude,
-              args.leftLatitude, args.rightLongitude, args.rightLatitude, date_str)
+              args.leftLatitude, args.rightLongitude, args.rightLatitude)
         n_a = num_area(args.dataType, task, args.dateStart, args.dateEnd, args.leftLongitude,
-                       args.leftLatitude, args.rightLongitude, args.rightLatitude, date_str)
-        print(n_a)
+                       args.leftLatitude, args.rightLongitude, args.rightLatitude)
+        # print(n_a)
     # python3 a04_data_statistics.py -t GHI -m point  -c yearSum -s 2019 -e 2019 -l 113 -a 43
     # python3 a04_data_statistics.py -t GHI -m point  -c yearMean -s 2019 -e 2019 -l 113 -a 43
     # python3 a04_data_statistics.py -t GHI -m point  -c yearAnomaly -s 2019 -e 2019 -l 113 -a 43
