@@ -143,15 +143,16 @@ def years_sum_area(dateStart, dateEnd, data, row_min, row_max, col_min, col_max)
             year : np,
             }
     '''
-    years_num = years_sum(dateStart, dateEnd, data)
+    years_num = data
     print(years_num)
     years_num_p = dict()
     for year in np.arange(int(dateStart), int(dateEnd) + 1):
         year_sum = years_num[year]
-        year_area_data = year_sum[int(row_min) - 1:int(row_max), int(col_min) - 1:int(col_max)]
+        year_point_data = year_sum[int(row_min) :int(row_max)+1, int(col_min):int(col_max)+1]
         print(year)
-        print('year_area_data', year_area_data)
-        years_num_p[year] = year_area_data
+        print('year_point_data', year_point_data)
+        years_num_p[year] = year_point_data
+
     return years_num_p
 
 
@@ -823,7 +824,7 @@ def num_point(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatit
             data_area_to_hdf(DATA_1KM, data_year, lons, lats, dataType, 'YEAR/{}'.format(dataType))
         else:
             path = DATA_1KM_YEAR
-            hdf_data_list, lon, lat = get_hdf_list_data(y_l, path, dataType)
+            hdf_data_list,lons, lats = get_hdf_list_data(y_l, path, dataType)
             data_year = {}
             for year in np.arange(int(dateStart), int(dateEnd) + 1):
                 a = 0
@@ -832,7 +833,7 @@ def num_point(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatit
         years_sum = years_sum_point(dateStart, dateEnd, data_year, row, col)  # 获取年值
         if out_fi == 1:
             data_point_to_txt(DATA_STAT, years_sum, dataType)  # 输出至txt
-        return years_sum
+        return years_sum,lons[row][col], lats[row][col]
     elif task == 2:
         print('任务：', taskChoice)
         y_l = judge_file(dateStart, dateEnd, dataType, 'year')
@@ -847,7 +848,7 @@ def num_point(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatit
             year_ave = ave(year_data_list, int(dateEnd) - int(dateStart) + 1)
         else:
             path = DATA_1KM_YEAR
-            hdf_data_list, lon, lat = get_hdf_list_data(y_l, path, dataType)
+            hdf_data_list,lons, lats = get_hdf_list_data(y_l, path, dataType)
             year_data_list = []
             for da in hdf_data_list:
                 year_data_list.append(da[row][col])
@@ -855,7 +856,7 @@ def num_point(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatit
         year_ave_dict = {'yearMean': year_ave, }
         if out_fi == 1:
             data_point_to_txt(DATA_STAT, year_ave_dict, dataType)  # 输出至txt
-        return year_ave_dict
+        return year_ave_dict,lons[row][col], lats[row][col]
     elif task == 3:
         print('任务：', taskChoice)
         y_l = judge_file(dateStart, dateEnd, dataType, 'year')
@@ -874,7 +875,7 @@ def num_point(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatit
                 year_jp_all_dict[year] = year_jp_all
         else:
             path = DATA_1KM_YEAR
-            hdf_data_list, lon, lat = get_hdf_list_data(y_l, path, dataType)
+            hdf_data_list, lons, lats  = get_hdf_list_data(y_l, path, dataType)
             year_data_list = []
             for da in hdf_data_list:
                 year_data_list.append(da[row][col])
@@ -888,7 +889,7 @@ def num_point(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatit
                 a += 1
         if out_fi == 1:
             data_point_to_txt(DATA_STAT, year_jp_all_dict, dataType)
-        return year_jp_all_dict
+        return year_jp_all_dict,lons[row][col], lats[row][col]
     elif task == 4:
         print('任务：', taskChoice)
         m_l = get_date_start_end(dateStart, dateEnd, dataType)
@@ -1023,14 +1024,25 @@ def num_area(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatitu
     col_min = max(1, col_min)
     col_max = min(7000, col_max)
     print('行列：', row_min, row_max, col_min, col_max)
-    data, lon, lat = get_data(dateStart, dateEnd, dataType)
-    print('数据获取完毕')
     # print(data)
     # 获取经纬
-    lons = lon[int(row_min) - 1: int(row_max), int(col_min) - 1: int(col_max)]
-    lats = lat[int(row_min) - 1: int(row_max), int(col_min) - 1: int(col_max)]
     if task == 1:
-        years_sum = years_sum_area(dateStart, dateEnd, data, row_min, row_max, col_min, col_max)
+        print('任务：', taskChoice)
+        # get file , for read , num add
+        y_l = judge_file(dateStart, dateEnd, dataType, 'year')
+        if y_l == 0:
+            data_year, lons, lats = get_year_data(dateStart, dateEnd, DATA_1KM_MONTH, dataType)
+            print('data_year:', data_year)
+            data_area_to_hdf(DATA_1KM, data_year, lons, lats, dataType, 'YEAR/{}'.format(dataType))
+        else:
+            path = DATA_1KM_YEAR
+            hdf_data_list, lons, lats = get_hdf_list_data(y_l, path, dataType)
+            data_year = {}
+            for year in np.arange(int(dateStart), int(dateEnd) + 1):
+                a = 0
+                data_year[year] = hdf_data_list[a]
+                a += 1
+        years_sum = years_sum_area(dateStart, dateEnd, data_year, row_min, row_max, col_min, col_max)
         if out_fi == 1:
             data_area_to_hdf(DATA_STAT, years_sum, lons, lats, dataType, date_str)
         return years_sum, lons, lats
@@ -1124,4 +1136,21 @@ if __name__ == '__main__':
               args.leftLatitude, args.rightLongitude, args.rightLatitude)
         n_a = num_area(args.dataType, args.taskChoice, args.dateStart, args.dateEnd, args.leftLongitude,
                        args.leftLatitude, args.rightLongitude, args.rightLatitude)
-
+        # print(n_a)
+    # python3 a04_data_statistics.py -t GHI -m point  -c yearSum -s 2019 -e 2019 -l 113 -a 43
+    # python3 a04_data_statistics.py -t GHI -m point  -c yearMean -s 2019 -e 2019 -l 113 -a 43
+    # python3 a04_data_statistics.py -t GHI -m point  -c yearAnomaly -s 2019 -e 2019 -l 113 -a 43
+    # python3 a04_data_statistics.py -t GHI -m area  -c yearSum -s 2019 -e 2019 -l 113 -a 43 -r 120 -i 36
+    # python3 a04_data_statistics.py -t GHI -m area  -c yearMean -s 2019 -e 2019 -l 113 -a 43 -r 120 -i 36
+    # python3 a04_data_statistics.py -t GHI -m area  -c yearAnomaly -s 2019 -e 2019 -l 113 -a 43 -r 120 -i 36
+    # t_a = data_area('DHI', 6, 1966, 1969, 1966, '70.01509999999999', '10.225', '70.06509999999999',
+    #                 '10.034999999999998', 'outdata\hdf')
+    # print(t_a)
+    # data = get_data(2019, 2019, 'DBI')
+    # print(data)
+    # # years_sum = years_sum(2019, 2019, data)
+    # # print(years_sum)
+    # years_sum = years_sum_point(2019, 2019, data, 5, 5)
+    # print(years_sum)
+    # n_P = num_point('DBI', 1, 2019, 2019,  '70.01509999999999', '10.225', )
+    # print(n_P)
