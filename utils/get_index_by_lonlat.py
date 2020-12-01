@@ -9,6 +9,8 @@ import pickle
 
 import numpy as np
 from scipy.spatial import cKDTree
+
+
 # from pykdtree.kdtree import KDTree  # 使用这个库没有办法保存kdtree
 
 
@@ -65,10 +67,10 @@ def get_point_index_by_lon_lat(lons, lats, xllcorner=69.9951, yllcorner=9.995, r
     if not isinstance(lats, np.array):
         lats = np.array(lats)
     rows = (yllcorner - lats) // res + nrows
-    rows.astype(np.int)
+    rows = rows.astype(np.int)
 
     cols = (lons - xllcorner) // res
-    cols.astype(np.int)
+    cols = cols.astype(np.int)
     return rows, cols
 
 
@@ -110,4 +112,4 @@ def get_area_data_by_index(data=None, row_min=237, row_max=1373, col_min=497, co
     :return:
     """
     if data is not None:
-        return data[row_min:row_max+1, col_min:col_max+1]
+        return data[row_min:row_max + 1, col_min:col_max + 1]
