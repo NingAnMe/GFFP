@@ -52,15 +52,19 @@ def get_point_index_kdtree(lon, lat, idx, ck, pre_dist=0.04):
 def get_point_index_by_lon_lat(lons, lats, xllcorner=69.9951, yllcorner=9.995, res=0.01, nrows=4501):
     """
     通过经纬度获取点的index
-    :param lons: np.array 点的经度
-    :param lats: np.array 点的纬度
+    :param lons: float\np.array\\list 点的经度
+    :param lats: float\np.array\\list 点的纬度
     :param xllcorner:  float 列起始位置经度
     :param yllcorner: float 行起始位置纬度
     :param res: float 分辨率
     :param nrows: int 总的行数
     :return: np.array 行列号
     """
-    rows = (yllcorner - lats) // res + nrows - 1
+    if not isinstance(lons, np.array):
+        lons = np.array(lons)
+    if not isinstance(lats, np.array):
+        lats = np.array(lats)
+    rows = (yllcorner - lats) // res + nrows
     rows.astype(np.int)
 
     cols = (lons - xllcorner) // res
