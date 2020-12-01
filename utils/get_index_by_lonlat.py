@@ -60,9 +60,9 @@ def get_point_index_by_lon_lat(lons, lats, xllcorner=69.9951, yllcorner=9.995, r
     :param nrows: int 总的行数
     :return: np.array 行列号
     """
-    if not isinstance(lons, np.array):
+    if not isinstance(lons, np.ndarray):
         lons = np.array(lons)
-    if not isinstance(lats, np.array):
+    if not isinstance(lats, np.ndarray):
         lats = np.array(lats)
     rows = (yllcorner - lats) // res + nrows
     rows.astype(np.int)

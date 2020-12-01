@@ -305,6 +305,27 @@ class Poor(Base):
                 print(row.to_dict()
                       )
 
+    @classmethod
+    def get_poor_info_by_file(cls, file_in):
+        """
+        :param file_in:
+        :return:
+        """
+        dtype = {
+            0: str,
+            1: str,
+            2: str,
+            3: str,
+            4: str,
+            5: str,
+            6: str,
+            7: float,
+            8: float,
+        }
+        data = pd.read_excel(file_in, index_col=0, dtype=dtype)
+        data.columns = ['code', 'sheng', 'shi', 'xian', 'xiang', 'cun', 'lat', 'lon']
+        return data
+
 
 def txt2db_ssi(file_in):
     data = []
@@ -438,3 +459,6 @@ if __name__ == '__main__':
     # txt2db_coef()
     # file_in = 'D:\project\py\gz\ky\gffp\提供样例数据\提供样例数据\\2019_rz.txt'
     # txt2db_ssi(file_in)
+    # from utils.config import POOR_XLSX
+    # data = Poor.get_poor_info_by_file(POOR_XLSX)
+    # print(data.head())
