@@ -9,6 +9,8 @@ import pickle
 
 import numpy as np
 from scipy.spatial import cKDTree
+
+
 # from pykdtree.kdtree import KDTree  # 使用这个库没有办法保存kdtree
 
 
@@ -110,4 +112,4 @@ def get_area_data_by_index(data=None, row_min=237, row_max=1373, col_min=497, co
     :return:
     """
     if data is not None:
-        return data[row_min:row_max+1, col_min:col_max+1]
+        return data[row_min:row_max + 1, col_min:col_max + 1]
