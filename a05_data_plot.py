@@ -35,7 +35,8 @@ from a04_data_statistics import num_area, num_point
 #     index =
 
 
-def plot_map(data, lons, lats, title='', vmin=-np.inf, vmax=np.inf, aeres=None, box=None, ticks=None, file_out=None):
+def plot_map(data, lons, lats, title='', vmin=-np.inf, vmax=np.inf, areas=None, box=None, ticks=None, file_out=None,
+             ptype='pcolormesh', mksize=5):
     if file_out is None:
         print('没有指定输出文件：file_out is None')
         return
@@ -89,20 +90,21 @@ def plot_map(data, lons, lats, title='', vmin=-np.inf, vmax=np.inf, aeres=None, 
     p.fontsize_tick = 15
 
     # set color map
-    print(vmin)
-    print(vmax)
+    print('vmin == {}'.format(vmin))
+    print('vmax == {}'.format(vmax))
     p.valmin = vmin
     p.valmax = vmax
     p.colormap = plt.get_cmap('jet')  # mpl.cm.rainbow, summer, jet, bwr
     # p.colorbar_extend = "max"
 
     # plot
-    p.easyplot(latitude, longitude, value, vmin=vmin, vmax=vmax, box=box, markersize=5, ptype="pcolormesh")
+    p.easyplot(latitude, longitude, value, vmin=vmin, vmax=vmax, box=box, markersize=mksize, ptype=ptype)
 
-    if aeres is not None:
-        print('设置地区 ：{}'.format(aeres))
+    # TODO 增加设置省份的功能
+    if areas is not None:
+        print('设置地区 ：{}'.format(areas))
         # aeres = ["江苏省", "安徽省", "浙江省", "上海市"]
-        for aere in aeres:
+        for aere in areas:
             p.city_boundary(aere, linewidth=1.2, shape_name='中国省级行政区')
 
     # 色标 ---------------------------
@@ -134,40 +136,42 @@ def plot_map(data, lons, lats, title='', vmin=-np.inf, vmax=np.inf, aeres=None, 
     p.clean()
 
 
-def plot_data_map(dataType=None,
+def plot_data_map(data_type=None,
                   taskChoice='',
                   dateStart=None,
                   dateEnd=None,
-                  area=None,
-                  leftLongitude=None,
-                  leftLatitude=None,
-                  rightLongitude=None,
-                  rightLatitude=None,
+                  area_value=None,
+                  left_longitude=None,
+                  left_latitude=None,
+                  right_longitude=None,
+                  right_latitude=None,
                   ):
     print('开始获取数据：num_area')
 
-    if area == 'poor':  # 绘制全国的贫困村
+    if area_value == 'poor':  # 绘制全国的贫困村
         poor_info = Poor.get_poor_info_by_file(POOR_XLSX)
-        lons_poor = poor_info['lon'].to_numpy()
-        lats_poor = poor_info['lat'].to_numpy()
+        lons = poor_info['lon'].to_numpy()
+        lats = poor_info['lat'].to_numpy()
 
-        datas, lons, lats = num_point(dataType=dataType,
-                                      taskChoice=taskChoice,
-                                      dateStart=dateStart,
-                                      dateEnd=dateEnd,
-                                      leftLongitude=lons_poor,
-                                      leftLatitude=lats_poor,
-                                      out_fi=0)
+        datas, _, _ = num_point(dataType=data_type,
+                                taskChoice=taskChoice,
+                                dateStart=dateStart,
+                                dateEnd=dateEnd,
+                                leftLongitude=lons,
+                                leftLatitude=lats,
+                                out_fi=0)
+        mksize = 1
     else:
-        datas, lons, lats = num_area(dataType=dataType,
+        datas, lons, lats = num_area(dataType=data_type,
                                      taskChoice=taskChoice,
                                      dateStart=dateStart,
                                      dateEnd=dateEnd,
-                                     leftLongitude=leftLongitude,
-                                     leftLatitude=leftLatitude,
-                                     rightLongitude=rightLongitude,
-                                     rightLatitude=rightLatitude,
+                                     leftLongitude=left_longitude,
+                                     leftLatitude=left_latitude,
+                                     rightLongitude=right_longitude,
+                                     rightLatitude=right_latitude,
                                      out_fi=0)
+        mksize = 5
 
     if lons is None or not np.any(lons):
         print(lons)
@@ -182,22 +186,22 @@ def plot_data_map(dataType=None,
         raise BufferError('没有数据： datas')
 
     out_date_str = datetime.now().strftime("%Y%m%d%H%M%S")
-    box = [leftLatitude, rightLatitude, leftLongitude, rightLongitude]  # nlat, slat, wlon, elon:北（小），南（大），东（大），西（小）
+    box = [left_latitude, right_latitude, left_longitude, right_longitude]  # nlat, slat, wlon, elon:北（小），南（大），东（大），西（小）
     for time, data in datas.items():
         print(time)
         print(data)
-        print('data', np.nanmin(data), np.nanmean(data), np.nanmax(data))
-        print('lons', np.nanmin(lons), np.nanmean(lons), np.nanmax(lons))
-        print('lats', np.nanmin(lats), np.nanmean(lats), np.nanmax(lats))
+        print('data', np.nanmin(data), np.nanmean(data), np.nanmax(data), data.shape)
+        print('lons', np.nanmin(lons), np.nanmean(lons), np.nanmax(lons), lons.shape)
+        print('lats', np.nanmin(lats), np.nanmean(lats), np.nanmax(lats), lats.shape)
 
-        title = '{}'.format(dataType)
+        title = '{}'.format(data_type)
         vmin = None
         vmax = None
         ticks = None
         # ticks = np.arange(-0.5, 0.51, 0.1)
         aeres = None
 
-        filename_out = '{}_{}_{}.png'.format(taskChoice, dataType, time)
+        filename_out = '{}_{}_{}.png'.format(taskChoice, data_type, time)
         dir_out = os.path.join(DATA_PICTURE, out_date_str)
         file_out = os.path.join(dir_out, filename_out)
 
@@ -207,7 +211,8 @@ def plot_data_map(dataType=None,
         #     continue
 
         plot_map(data, lons, lats, title=title, vmin=vmin, vmax=vmax,
-                 aeres=aeres, box=box, ticks=ticks, file_out=file_out)
+                 areas=aeres, box=box, ticks=ticks, file_out=file_out,
+                 mksize=mksize)
         return dir_out
 
 
@@ -283,15 +288,15 @@ if __name__ == '__main__':
             raise ValueError('rightLatitude >= leftLatitude')
 
         dir_ = plot_data_map(
-            dataType=args.dataType,
+            data_type=args.dataType,
             taskChoice=args.taskChoice,
             dateStart=year_start,
             dateEnd=year_end,
-            area=area,
-            leftLongitude=leftLongitude,
-            leftLatitude=leftLatitude,
-            rightLongitude=rightLongitude,
-            rightLatitude=rightLatitude,
+            area_value=area,
+            left_longitude=leftLongitude,
+            left_latitude=leftLatitude,
+            right_longitude=rightLongitude,
+            right_latitude=rightLatitude,
         )
         print('finish{}'.format(dir_))
 
