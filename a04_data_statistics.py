@@ -1529,7 +1529,7 @@ if __name__ == '__main__':
     parser.add_argument('--leftLongitude', '-l', help='经度或左上角经度，47.302235', required=True)
     parser.add_argument('--leftLatitude', '-a', help='纬度或左上角纬度，85.880519', required=True)
     parser.add_argument('--rightLongitude', '-r', help='右下角经度，47.302235', required=False)
-    parser.add_argument('--rightLatitude', '-i', help='右下角经度，85.880519', required=False)
+    parser.add_argument('--rightLatitude', '-i', help='右下角纬度，85.880519', required=False)
     args = parser.parse_args()
 
     if args.modeType == 'point':
