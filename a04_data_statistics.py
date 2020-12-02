@@ -7,18 +7,13 @@ import argparse
 from datetime import datetime, date
 from warnings import filterwarnings
 import numpy as np
-from dateutil.relativedelta import relativedelta
 # from schedule import *
 from utils.config import get_datatype
-from utils.get_index_by_lonlat import get_point_index_by_lon_lat, get_area_index_by_lon_lat
+from utils.get_index_by_lonlat import get_point_index_by_lon_lat
 from utils.data import DemLoader
-from utils.path import *
-from utils.hdf5 import *
-from datetime import datetime
-import pandas as pd
-import h5py
+from utils.hdf5 import get_hdf5_data, write_hdf5_and_compress
 from collections import defaultdict
-from user_config import *
+from user_config import DATA_1KM, DATA_1KM_MONTH, DATA_1KM_SEASON, DATA_1KM_QUARTER, DATA_1KM_YEAR, DATA_STAT
 
 task_dict = {
     'yearSum': 1, 'yearMean': 2, 'yearAnomaly': 3, 'monthSum': 4, 'monthMean': 5, 'monthAnomaly': 6,
@@ -30,10 +25,10 @@ task_dict = {
 '''
 
 
-def ave(sum, len):  # R
-    num_np = np.array(sum)
-    ave = np.sum(num_np) / len
-    return ave
+def ave(sum_p, len_p):  # R
+    num_np = np.array(sum_p)
+    ave_p = np.sum(num_np) / len_p
+    return ave_p
 
 
 def ave_a(lis, li_len):
@@ -48,34 +43,34 @@ def ave_a(lis, li_len):
     for s in lis:
         sum_a = sum_a + s
     # print(sum_a)
-    ave_a = sum_a / li_len
-    return ave_a
+    ave_area = sum_a / li_len
+    return ave_area
 
 
-def juping(oneyear, ave):  # R
-    '''
+def juping(oneyear, ave_p):  # R
+    """
     :param oneyear: 一年总值
-    :param ave: 多年平均值
-    :return:
-    '''
+    :param ave_p: 多年平均值
+    :return:距平
+    """
     # （一年值 - 多年平均值） / 多年平均值 * 100 %
-    jp = (oneyear - ave) / ave * 100
+    jp = (oneyear - ave_p) / ave_p * 100
     jl = '{}%'.format(jp)
     return jl
 
 
-def juping_a(oneyear, ave):
+def juping_a(oneyear, ave_area):
     # （一年值 - 多年平均值） / 多年平均值 * 100 %
-    jp = (oneyear - ave) / ave * 100
+    jp = (oneyear - ave_area) / ave_area * 100
     print('距平：', jp)
     return jp
 
 
 def year_sum(year_data):
-    '''
+    """
     :param year_data: 一年中每个月的数据
     :return: 年值
-    '''
+    """
     num_year = np.zeros((len(year_data[0]), len(year_data[0][0])))
     print('num_year.shape', num_year.shape)
     # 年值
@@ -84,18 +79,15 @@ def year_sum(year_data):
     return num_year
 
 
-def years_sum(dateStart, dateEnd, data):
-    '''
-    :param dateStart:
-    :param dateEnd:
-    :param data:
+def years_sum(date_start, date_end, data):
+    """
     :return: {
             year1 : 全部年值
             year2 : 全部年值
             }
-    '''
+    """
     years_num = dict()
-    for year in np.arange(int(dateStart), int(dateEnd) + 1):
+    for year in np.arange(int(date_start), int(date_end) + 1):
         data_lo_la_year = data[year]
         data = data_lo_la_year['data']
         year_sum_s = year_sum(data)
@@ -105,17 +97,17 @@ def years_sum(dateStart, dateEnd, data):
     return years_num
 
 
-def years_sum_point(dateStart, dateEnd, data, row, col):  # R
-    '''
+def years_sum_point(date_start, date_end, data, row, col):  # R
+    """
     :return: {year1 ; 年值,year2 ; 年值}
-    '''
+    """
     years_num = data
     print(years_num)
     years_num_p = dict()
-    for year in np.arange(int(dateStart), int(dateEnd) + 1):
-        year_sum = years_num[year]
+    for year in np.arange(int(date_start), int(date_end) + 1):
+        year_sum_p = years_num[year]
         print(row, col)
-        year_point_data = year_sum[(row, col)]
+        year_point_data = year_sum_p[(row, col)]
         print(year)
         print('year_point_data', year_point_data)
         years_num_p[year] = year_point_data
@@ -123,16 +115,16 @@ def years_sum_point(dateStart, dateEnd, data, row, col):  # R
     return years_num_p
 
 
-def years_sum_area(dateStart, dateEnd, data, row_min, row_max, col_min, col_max):  # R
-    '''
+def years_sum_area(date_start, date_end, data, row_min, row_max, col_min, col_max):  # R
+    """
      :return: {year1 ; 年值,year2 ; 年值}
-    '''
+    """
     years_num = data
     print(years_num)
     years_num_p = dict()
-    for year in np.arange(int(dateStart), int(dateEnd) + 1):
-        year_sum = years_num[year]
-        year_area_data = year_sum[int(row_min):int(row_max) + 1, int(col_min):int(col_max) + 1]
+    for year in np.arange(int(date_start), int(date_end) + 1):
+        year_sum_p = years_num[year]
+        year_area_data = year_sum_p[int(row_min):int(row_max) + 1, int(col_min):int(col_max) + 1]
         print(year)
         print('year_area_data', year_area_data)
         years_num_p[year] = year_area_data
@@ -152,11 +144,11 @@ def get_mon_data(data):
     return mon_dic
 
 
-def get_date_start_end(dateStart, dateEnd, data_type):  # R
-    '''
+def get_date_start_end(date_start, date_end, data_type):  # R
+    """
     获取所需文件列表
-    '''
-    print(dateStart, dateEnd, data_type)
+    """
+    print(date_start, date_end, data_type)
     data_path = os.path.join(DATA_1KM_MONTH, data_type)
     # data_path = 'D:\project\py\gz\ky\gffp\\aid\data\{}'.format(data_type)
     print('get_date_start_end', data_path)
@@ -169,22 +161,23 @@ def get_date_start_end(dateStart, dateEnd, data_type):  # R
         # print(file_date)
         file_date = file_date.strftime("%Y")
         # print(int(file_date))
-        if int(dateStart) <= int(file_date) <= int(dateEnd):
+        if int(date_start) <= int(file_date) <= int(date_end):
             # print('file_', file_)
             file_list.append(file_)
     if not file_list:
-        raise ValueError('No file in {} {}'.format(dateStart, dateEnd))
+        raise ValueError('No file in {} {}'.format(date_start, date_end))
     # print(file_list)
     print('----------------------------------------------------------------------------')
     return file_list
 
 
 def judge_file(date_start, date_end, data_type, task_name):  # R
-    '''
+    """
     :param task_name: 'sea' 'qua' 'year' 'mon'
     :return:file_list
-    '''
+    """
     print('judge_file')
+    data_path = str
     if task_name == 'sea':
         data_path = os.path.join(DATA_1KM_SEASON, data_type)
     elif task_name == 'qua':
@@ -194,7 +187,6 @@ def judge_file(date_start, date_end, data_type, task_name):  # R
     elif task_name == 'mon':
         data_path = os.path.join(DATA_1KM_MONTH, data_type)
     print(date_start, date_end, data_type)
-    print(data_path)
     if not os.path.exists(data_path):
         os.makedirs(data_path)
         return 0
@@ -215,7 +207,7 @@ def judge_file(date_start, date_end, data_type, task_name):  # R
 
 
 def get_file_year(files):  # R
-    '''获取'''
+    """获取"""
     print('get_file_year')
     files_year = defaultdict(list)
     for file_ in files:
@@ -232,9 +224,9 @@ def get_file_year(files):  # R
 
 
 def get_file_mon(files):  # R
-    ''''
+    """'
     :return [[{{2020:Feb_file}}][][][][]]
-    '''
+    """
     files_mon = [[{}], [{}], [{}], [{}], [{}], [{}], [{}], [{}], [{}], [{}], [{}], [{}]]
     for file_ in files:
         print(file_)
@@ -255,17 +247,19 @@ def get_file_mon(files):  # R
     return files_mon
 
 
-def get_mon_data_point(file_list, path, dataType, row, col):  # R
+def get_mon_data_point(file_list, path, data_type, row, col):  # R
     mon_list = get_file_mon(file_list)
     mon_dic_point = {}
     a = 0
+    lon = np.astype(np.float)
+    lat = np.astype(np.float)
     for mon_dic in mon_list:
         for y_m_key, hdf in mon_dic[0].items():
             a += 1
-            data_path = os.path.join(path, dataType)
+            data_path = os.path.join(path, data_type)
             file_hdf = '{}/{}'.format(data_path, hdf)
-            print('file_hdf', file_hdf, dataType)
-            data = get_hdf5_data(file_hdf, dataType, 1, 0, [0, np.inf], np.nan)[(row, col)]
+            print('file_hdf', file_hdf, data_type)
+            data = get_hdf5_data(file_hdf, data_type, 1, 0, [0, np.inf], np.nan)[(row, col)]
             mon_dic_point[y_m_key] = data
             # print(file_hdf, data)
             if a == 1:
@@ -277,17 +271,19 @@ def get_mon_data_point(file_list, path, dataType, row, col):  # R
     return mon_dic_point, lon[(row, col)], lat[(row, col)]
 
 
-def get_mon_data_area(file_list, path, dataType, row_min, row_max, col_min, col_max):  # R
+def get_mon_data_area(file_list, path, data_type, row_min, row_max, col_min, col_max):  # R
     mon_list = get_file_mon(file_list)
     mon_dic_point = {}
     a = 0
+    lon = np.astype(np.float)
+    lat = np.astype(np.float)
     for mon_dic in mon_list:
         for y_m_key, hdf in mon_dic[0].items():
             a += 1
-            data_path = os.path.join(path, dataType)
+            data_path = os.path.join(path, data_type)
             file_hdf = '{}/{}'.format(data_path, hdf)
-            print('file_hdf', file_hdf, dataType)
-            data = get_hdf5_data(file_hdf, dataType, 1, 0, [0, np.inf], np.nan)
+            print('file_hdf', file_hdf, data_type)
+            data = get_hdf5_data(file_hdf, data_type, 1, 0, [0, np.inf], np.nan)
             mon_dic_point[y_m_key] = data[int(row_min):int(row_max) + 1, int(col_min):int(col_max) + 1]
             # print(file_hdf, data)
             if a == 1:
@@ -301,10 +297,12 @@ def get_mon_data_area(file_list, path, dataType, row_min, row_max, col_min, col_
     return mon_dic_point, lon, lat
 
 
-def get_mon_mean_data_point(file_list, path, dataType, row, col):  # R
+def get_mon_mean_data_point(file_list, path, data_type, row, col):  # R
     mon_list = get_file_mon(file_list)
     mon_mean_dic_point = {}
     a = 0
+    lon = np.astype(np.float)
+    lat = np.astype(np.float)
     for mon in np.arange(1, len(mon_list) + 1):
         mon_dic = mon_list[mon - 1]
         m_sum = 0
@@ -312,10 +310,10 @@ def get_mon_mean_data_point(file_list, path, dataType, row, col):  # R
         for y_m_key, hdf in mon_dic[0].items():
             a += 1
             i += 1
-            data_path = os.path.join(path, dataType)
+            data_path = os.path.join(path, data_type)
             file_hdf = '{}/{}'.format(data_path, hdf)
-            print('file_hdf', file_hdf, dataType)
-            data = get_hdf5_data(file_hdf, dataType, 1, 0, [0, np.inf], np.nan)[(row, col)]
+            print('file_hdf', file_hdf, data_type)
+            data = get_hdf5_data(file_hdf, data_type, 1, 0, [0, np.inf], np.nan)[(row, col)]
             m_sum = data + m_sum
             if a == 1:
                 dem = DemLoader()
@@ -327,20 +325,23 @@ def get_mon_mean_data_point(file_list, path, dataType, row, col):  # R
     return mon_mean_dic_point, lon[(row, col)], lat[(row, col)]
 
 
-def get_mon_mean_data_area(file_list, path, dataType, row_min, row_max, col_min, col_max):  # R
+def get_mon_mean_data_area(file_list, path, data_type, row_min, row_max, col_min, col_max):  # R
     mon_list = get_file_mon(file_list)
     mon_mean_dic_point = {}
     a = 0
+    lon = np.astype(np.float)
+    lat = np.astype(np.float)
+    m_sum = np.astype(np.float)
     for mon in np.arange(1, len(mon_list) + 1):
         mon_dic = mon_list[mon - 1]
         i = 0
         for y_m_key, hdf in mon_dic[0].items():
             a += 1
             i += 1
-            data_path = os.path.join(path, dataType)
+            data_path = os.path.join(path, data_type)
             file_hdf = '{}/{}'.format(data_path, hdf)
-            print('file_hdf', file_hdf, dataType)
-            data = get_hdf5_data(file_hdf, dataType, 1, 0, [0, np.inf], np.nan)
+            print('file_hdf', file_hdf, data_type)
+            data = get_hdf5_data(file_hdf, data_type, 1, 0, [0, np.inf], np.nan)
             if i == 1:
                 m_sum = data[int(row_min):int(row_max) + 1, int(col_min):int(col_max) + 1]
             else:
@@ -357,11 +358,13 @@ def get_mon_mean_data_area(file_list, path, dataType, row_min, row_max, col_min,
     return mon_mean_dic_point, lon, lat
 
 
-def get_mon_ano_data_point(file_list, path, dataType, row, col):  # R
+def get_mon_ano_data_point(file_list, path, data_type, row, col):  # R
     mon_list = get_file_mon(file_list)
     mon_dic_point = {}
     mon_mean_dic_point = {}
     a = 0
+    lon = np.astype(np.float)
+    lat = np.astype(np.float)
     for mon in np.arange(1, len(mon_list) + 1):
         mon_dic = mon_list[mon - 1]
         m_sum = 0
@@ -370,10 +373,10 @@ def get_mon_ano_data_point(file_list, path, dataType, row, col):  # R
         for y_m_key, hdf in mon_dic[0].items():
             a += 1
             i += 1
-            data_path = os.path.join(path, dataType)
+            data_path = os.path.join(path, data_type)
             file_hdf = '{}/{}'.format(data_path, hdf)
-            print('file_hdf', file_hdf, dataType)
-            data = get_hdf5_data(file_hdf, dataType, 1, 0, [0, np.inf], np.nan)[(row, col)]
+            print('file_hdf', file_hdf, data_type)
+            data = get_hdf5_data(file_hdf, data_type, 1, 0, [0, np.inf], np.nan)[(row, col)]
             mon_data_dic[y_m_key] = data
             m_sum = data + m_sum
             if a == 1:
@@ -390,13 +393,15 @@ def get_mon_ano_data_point(file_list, path, dataType, row, col):  # R
     return mon_dic_point, lon[(row, col)], lat[(row, col)]
 
 
-def get_mon_ano_data_area(file_list, path, dataType, row_min, row_max, col_min,
+def get_mon_ano_data_area(file_list, path, data_type, row_min, row_max, col_min,
                           col_max):  # R
 
     mon_list = get_file_mon(file_list)
     mon_dic_point = {}
     mon_mean_dic_point = {}
     a = 0
+    lon = np.astype(np.float)
+    lat = np.astype(np.float)
     for mon in np.arange(1, len(mon_list) + 1):
         mon_dic = mon_list[mon - 1]
         m_sum = 0
@@ -405,10 +410,10 @@ def get_mon_ano_data_area(file_list, path, dataType, row_min, row_max, col_min,
         for y_m_key, hdf in mon_dic[0].items():
             a += 1
             i += 1
-            data_path = os.path.join(path, dataType)
+            data_path = os.path.join(path, data_type)
             file_hdf = '{}/{}'.format(data_path, hdf)
-            print('file_hdf', file_hdf, dataType)
-            data = get_hdf5_data(file_hdf, dataType, 1, 0, [0, np.inf], np.nan)
+            print('file_hdf', file_hdf, data_type)
+            data = get_hdf5_data(file_hdf, data_type, 1, 0, [0, np.inf], np.nan)
             print('data.shape', data.shape)
             print(int(row_min), int(row_max) + 1, int(col_min), int(col_max) + 1)
             if i == 1:
@@ -434,7 +439,7 @@ def get_mon_ano_data_area(file_list, path, dataType, row_min, row_max, col_min,
 
 
 def get_file_sea(files, date_start, date_end):  # R
-    ''' {year:{{'MAM':{mon:file},'JJA':{},'SON':{},'DJF':{}}}'''
+    """ {year:{{'MAM':{mon:file},'JJA':{},'SON':{},'DJF':{}}}"""
     sea_dic = {}
     for file_ in files:
         print(file_)
@@ -573,6 +578,7 @@ def get_sea_mean_area(data_sea, dateStart, dateEnd):
 def get_sea_ano(data_sea, mean_sea, dateStart, dateEnd):
     mean = mean_sea
     jp_dic = {}
+    jp = np.astype(np.float)
     for sea_key, data in data_sea.items():
         filename = os.path.split(sea_key)[1]
         # print(filename)
@@ -593,6 +599,7 @@ def get_sea_ano(data_sea, mean_sea, dateStart, dateEnd):
 def get_sea_ano_area(data_sea, mean_sea, dateStart, dateEnd):
     mean = mean_sea
     jp_dic = {}
+    jp = np.astype(np.float)
     for sea_key, data in data_sea.items():
         filename = os.path.split(sea_key)[1]
         # print(filename)
@@ -736,6 +743,7 @@ def get_qua_mean_a(data_sea, dateStart, dateEnd):
 def get_qua_ano(data_sea, mean_sea, dateStart, dateEnd):
     mean = mean_sea
     jp_dic = {}
+    jp = np.astype(np.float)
     for sea_key, data in data_sea.items():
         filename = os.path.split(sea_key)[1]
         # print(filename)
@@ -756,6 +764,7 @@ def get_qua_ano(data_sea, mean_sea, dateStart, dateEnd):
 def get_qua_ano_a(data_sea, mean_sea, dateStart, dateEnd):
     mean = mean_sea
     jp_dic = {}
+    jp = np.astype(np.float)
     for sea_key, data in data_sea.items():
         filename = os.path.split(sea_key)[1]
         # print(filename)
@@ -776,6 +785,8 @@ def get_qua_ano_a(data_sea, mean_sea, dateStart, dateEnd):
 def get_hdf_list_data(files_list, path, dataType):  # R
     hdf_data_list = []
     a = 0
+    lon = np.astype(np.float)
+    lat = np.astype(np.float)
     for hdf in files_list:
         a += 1
         data_path = os.path.join(path, dataType)
@@ -795,6 +806,8 @@ def get_hdf_list_data(files_list, path, dataType):  # R
 def get_hdf_dic_data_point(files_dic, path, dataType, row, col):  # R
     hdf_data_dic = {}
     a = 0
+    lon = np.astype(np.float)
+    lat = np.astype(np.float)
     for sea_key, hdf in files_dic.items():
         a += 1
         data_path = os.path.join(path, dataType)
@@ -815,6 +828,8 @@ def get_hdf_dic_data_area(files_dic, path, dataType, row_min, row_max, col_min,
                           col_max):  # R
     hdf_data_dic = {}
     a = 0
+    lon = np.astype(np.float)
+    lat = np.astype(np.float)
     for sea_key, hdf in files_dic.items():
         a += 1
         data_path = os.path.join(path, dataType)
@@ -836,6 +851,8 @@ def get_hdf_dic_data_area(files_dic, path, dataType, row_min, row_max, col_min,
 def get_hdf_list_data_and_sum(files_list, path, data_type):  # R
     hdf_data_list = []
     a = 0
+    lon = np.astype(np.float)
+    lat = np.astype(np.float)
     for hdf in files_list:
         a += 1
         data_path = os.path.join(path, data_type)
@@ -857,6 +874,8 @@ def get_year_data(date_start, date_end, data_path, data_type):  # R
     '''
     :return: { year:data} lon lat
     '''
+    lon = np.astype(np.float)
+    lat = np.astype(np.float)
     files = get_date_start_end(date_start, date_end, data_type)  # 获取月数据分组文件
     results_return = dict()
     for year, files_one_year in get_file_year(files).items():
@@ -873,10 +892,13 @@ def get_sea_data(date_start, date_end, dataType, row, col):  # R
     files = get_date_start_end(date_start, date_end, dataType)
     results_return = dict()
     i = 0
+    lons = np.astype(np.float)
+    lats = np.astype(np.float)
     for year, files_one_year in get_file_sea(files, date_start,
                                              date_end, ).items():  # {year:{{'MAM':{mon:file},'JJA':{},'SON':{},'DJF':{}}}'
         for sea, mon_dic in files_one_year.items():
             a = 0
+            sea_sum = np.astype(np.float)
             for mon, file in mon_dic.items():
                 a += 1
                 i += 1
@@ -907,10 +929,13 @@ def get_sea_data_area(date_start, date_end, dataType, row_min, row_max, col_min,
     files = get_date_start_end(date_start, date_end, dataType)
     results_return = dict()
     i = 0
+    lons = np.astype(np.float)
+    lats = np.astype(np.float)
     for year, files_one_year in get_file_sea(files, date_start,
                                              date_end, ).items():  # {year:{{'MAM':{mon:file},'JJA':{},'SON':{},'DJF':{}}}'
         for sea, mon_dic in files_one_year.items():
             a = 0
+            sea_sum = np.astype(np.float)
             for mon, file in mon_dic.items():
                 a += 1
                 i += 1
@@ -942,9 +967,12 @@ def get_qua_data(date_start, date_end, dataType, row, col):  # R
     files = get_date_start_end(date_start, date_end, dataType)
     results_return = dict()
     i = 0
+    lons = np.astype(float)
+    lats = np.astype(float)
     for year, files_one_year in get_file_qua(files, date_start, date_end).items():
         for sea, mon_dic in files_one_year.items():
             a = 0
+            sea_sum = np.astype(float)
             for mon, file in mon_dic.items():
                 a += 1
                 i += 1
@@ -975,9 +1003,12 @@ def get_qua_data_area(date_start, date_end, dataType, row_min, row_max, col_min,
     files = get_date_start_end(date_start, date_end, dataType)
     results_return = dict()
     i = 0
+    lons = np.astype(np.float)
+    lats = np.astype(np.float)
     for year, files_one_year in get_file_qua(files, date_start, date_end).items():
         for sea, mon_dic in files_one_year.items():
             a = 0
+            sea_sum = np.astype(np.float)
             for mon, file in mon_dic.items():
                 a += 1
                 i += 1
@@ -1015,6 +1046,8 @@ def get_data(date_start, date_end, data_type):
     data_path = os.path.join(DATA_1KM, data_type)
     files = get_date_start_end(date_start, date_end, data_type)
     results_return = dict()
+    lon = np.astype(np.float)
+    lat = np.astype(np.float)
     for year, files_one_year in get_file_year(files).items():
         data, lon, lat = get_hdf_list_data(files_one_year, data_path, data_type)
         result = {'data': data, }
@@ -1428,9 +1461,10 @@ def num_area(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatitu
     elif task == 10:
         print('任务：', taskChoice)
         q_l = judge_file(dateStart, dateEnd, dataType, 'qua')
+
         if q_l == 0:
-            data_qua, lon, lat = get_qua_data(dateStart, dateEnd, dataType, row_min, row_max, col_min,
-                                              col_max)
+            data_qua, lon, lat = get_qua_data_area(dateStart, dateEnd, dataType, row_min, row_max, col_min,
+                                                   col_max)
             print('data_qua:', data_qua)
         else:
             path = DATA_1KM_QUARTER
@@ -1445,8 +1479,8 @@ def num_area(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatitu
         print('任务：', taskChoice)
         q_l = judge_file(dateStart, dateEnd, dataType, 'qua')
         if q_l == 0:
-            data_qua, lon, lat = get_qua_data(dateStart, dateEnd, dataType, row_min, row_max, col_min,
-                                              col_max)
+            data_qua, lon, lat = get_qua_data_area(dateStart, dateEnd, dataType, row_min, row_max, col_min,
+                                                   col_max)
             print('data_qua:', data_qua)
         else:
             path = DATA_1KM_QUARTER
@@ -1461,8 +1495,8 @@ def num_area(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatitu
         print('任务：', taskChoice)
         q_l = judge_file(dateStart, dateEnd, dataType, 'qua')
         if q_l == 0:
-            data_qua, lon, lat = get_qua_data(dateStart, dateEnd, dataType, row_min, row_max, col_min,
-                                              col_max)
+            data_qua, lon, lat = get_qua_data_area(dateStart, dateEnd, dataType, row_min, row_max, col_min,
+                                                   col_max)
             print('data_qua:', data_qua)
         else:
             path = DATA_1KM_QUARTER
@@ -1477,37 +1511,6 @@ def num_area(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatitu
 
 
 filterwarnings("ignore")
-
-resolution_types = {
-    '1KM',
-    '1KMCorrect',
-    '4KM',
-    '4KMCorrect',
-}
-functions = {
-    'fy4a_save_4km_orbit_data_in_database',
-    'fy4a_save_4km_orbit_ref_data_in_database',
-    'product_fy3d_1km_daily_data',
-    'product_fy4a_4kmcorrect_disk_full_data_orbit',
-    'product_fy4a_1km_disk_full_data_orbit',
-    'product_fy4a_1kmcorrect_disk_full_data_orbit',
-    'product_fy4a_disk_full_image_orbit',
-    'product_combine_data',
-    'product_image',
-    'product_cloud_image',
-}
-
-sat_sensors = {
-    'FY4A_AGRI',
-    'FY3D_MERSI',
-}
-
-frequencys = {
-    'Orbit',
-    'Daily',
-    'Monthly'
-    'Yearly',
-}
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='GFSSI Schedule')
