@@ -66,6 +66,7 @@ def get_point_index_by_lon_lat(lons, lats, xllcorner=69.9951, yllcorner=9.995, r
         lons = np.array(lons)
     if not isinstance(lats, np.ndarray):
         lats = np.array(lats)
+    print(yllcorner, lats, res, nrows)
     rows = (yllcorner - lats) // res + nrows
     rows = rows.astype(np.int)
 
