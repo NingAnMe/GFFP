@@ -8,7 +8,7 @@ from utils.path import make_sure_path_exists, AID_PATH
 from utils.hdf5 import write_hdf5_and_compress
 from utils.data import DemLoader
 from utils.config import COEF_TXT, print_config
-from user_config import DATA_1KM
+from user_config import DATA_1KM_MONTH
 
 import os
 from datetime import datetime, date
@@ -246,9 +246,79 @@ def get_station_data(ym, session):
     return
 
 
+def add_station_value(datas, data_name):
+    """
+    补点
+    :param datas:
+    :param data_name:
+    :return:
+    """
+    # 左点向左3度
+    index_lon_min = datas['lon'].argmin()
+    lon = datas['lon'][index_lon_min] - 3
+    lat = datas['lat'][index_lon_min]
+    points_add = np.array((lon, lat)).reshape(1, 2)
+    datas_add = datas[data_name][index_lon_min]
+
+    # 左上点向左上1度
+    index = (datas['lon'] < 87) & (datas['lat'] > 48)
+    lon = datas['lon'][index].iloc[0]
+    lat = datas['lat'][index].iloc[0]
+    lon = lon - 1
+    lat = lat + 1
+    data_ = datas[data_name][index].iloc[0]
+    point_ = np.array((lon, lat)).reshape(1, 2)
+    points_add = np.concatenate((points_add, point_), axis=0)
+    datas_add = np.append(datas_add, data_)
+
+    # 左下点向左下1度
+    index = (datas['lon'] < 83) & (datas['lat'] < 31)
+    lon = datas['lon'][index].iloc[0]
+    lat = datas['lat'][index].iloc[0]
+    lon = lon - 1
+    lat = lat - 1
+    data_ = datas[data_name][index].iloc[0]
+    point_ = np.array((lon, lat)).reshape(1, 2)
+    points_add = np.concatenate((points_add, point_), axis=0)
+    datas_add = np.append(datas_add, data_)
+
+    # 右点向右
+    index_lon_max = datas['lon'].argmax()
+    lon = datas['lon'][index_lon_max] + 1.5
+    lat = datas['lat'][index_lon_max]
+    point_ = np.array((lon, lat)).reshape(1, 2)
+    data_ = datas[data_name][index_lon_max]
+    points_add = np.concatenate((points_add, point_), axis=0)
+    datas_add = np.append(datas_add, data_)
+
+    # 下点向下
+    index_lat_min = datas['lat'].argmin()
+    lon = datas['lon'][index_lat_min]
+    lat = datas['lat'][index_lat_min] - 0.8
+    point_ = np.array((lon, lat)).reshape(1, 2)
+    data_ = datas[data_name][index_lat_min]
+    points_add = np.concatenate((points_add, point_), axis=0)
+    datas_add = np.append(datas_add, data_)
+
+    # 上点向上
+    index_lat_max = datas['lat'].argmax()
+    lon = datas['lon'][index_lat_max]
+    lat = datas['lat'][index_lat_max] + 1.5
+    point_ = np.array((lon, lat)).reshape(1, 2)
+    data_ = datas[data_name][index_lat_max]
+    points_add = np.concatenate((points_add, point_), axis=0)
+    datas_add = np.append(datas_add, data_)
+    return points_add, datas_add
+
+
 def grid_data(datas, lons_grid, lats_grid, data_name):
     points = datas[['lon', 'lat']].to_numpy()
     data = datas[data_name].to_numpy()
+    # 补点
+    points_add, data_add = add_station_value(datas, data_name)
+    points = np.concatenate((points, points_add), axis=0)
+    data = np.append(data, data_add)
+
     data_grid = griddata(points, data, (lons_grid, lats_grid), method='cubic', fill_value=0)
 
     return data_grid
@@ -269,7 +339,7 @@ def cal_1km(date_min, date_max):
             # else:
             #     print(data_month.head())
         for data_name in ['GHI', 'DBI', 'DHI', 'GTI']:
-            out_dir = os.path.join(DATA_1KM, data_name)
+            out_dir = os.path.join(DATA_1KM_MONTH, data_name)
             make_sure_path_exists(out_dir)
             filename = '{}_{}.hdf'.format(data_name, ym)
             out_file = os.path.join(out_dir, filename)
@@ -339,15 +409,15 @@ def t_cal_station():
 
 def t_cal_1km():
     date_min = date(2019, 1, 1)
-    date_max = date(2019, 1, 1)
+    date_max = date(2019, 12, 1)
     cal_1km(date_min, date_max)
 
 
 if __name__ == '__main__':
     # t_station_info()
     # t_()
-    t_cal_station()
-    # t_cal_1km()
+    # t_cal_station()
+    t_cal_1km()
     """
     stationInfoFile : str 站点信息
     stationSolarFile :str 光伏数据
