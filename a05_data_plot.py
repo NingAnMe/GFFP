@@ -27,16 +27,16 @@ from DV.dv_map import dv_map
 
 from user_config import DATA_1KM, DATA_STAT, DATA_PICTURE
 from utils.config import LATITUDE_RANGE_China, LONGITUDE_RANGE_China, POOR_XLSX
-from utils.model import Poor
+from utils.model import Village
 from a04_data_statistics import num_area, num_point
 
 
-# def get_poor_data(data, lons, lats, lon_poor, lat_poor):
+# def get_village_data(data, lons, lats, lon_village, lat_village):
 #     index =
 
 
 def plot_map(data, lons, lats, title='', vmin=-np.inf, vmax=np.inf, areas=None, box=None, ticks=None, file_out=None,
-             ptype='pcolormesh', mksize=5):
+             ptype='pcolormesh', mksize=5, nanhai=False):
     if file_out is None:
         print('没有指定输出文件：file_out is None')
         return
@@ -67,9 +67,12 @@ def plot_map(data, lons, lats, title='', vmin=-np.inf, vmax=np.inf, areas=None, 
     p.show_coastlines = False
     # p.show_line_of_latlon = False
     # p.show_china = True
+    if nanhai:
+        p.nanhai_loc = [0.83, 0.25, 0.15, 0.17]
+        p.nanhai_minimap()
     p.show_china_province = True
     p.show_inside_china = True
-    p.show_inside_china_mini = False
+    p.show_inside_china_mini = True
 
     if box:
         if abs(box[1] - box[0]) < 10:
@@ -148,10 +151,10 @@ def plot_data_map(data_type=None,
                   ):
     print('开始获取数据：num_area')
 
-    if area_value == 'poor':  # 绘制全国的贫困村
-        poor_info = Poor.get_poor_info_by_file(POOR_XLSX)
-        lons = poor_info['lon'].to_numpy()
-        lats = poor_info['lat'].to_numpy()
+    if area_value == 'village':  # 绘制全国的贫困村
+        village_info = Village.get_village_info_by_file(POOR_XLSX)
+        lons = village_info['lon'].to_numpy()
+        lats = village_info['lat'].to_numpy()
 
         datas, _, _ = num_point(dataType=data_type,
                                 taskChoice=taskChoice,
@@ -173,6 +176,12 @@ def plot_data_map(data_type=None,
                                      out_fi=0)
         mksize = 5
 
+    # 是否绘制南海
+    if area_value == 'China':
+        nanhai = True
+    else:
+        nanhai = False
+
     if lons is None or not np.any(lons):
         print(lons)
         raise BufferError('没有数据： lons')
@@ -187,6 +196,7 @@ def plot_data_map(data_type=None,
 
     out_date_str = datetime.now().strftime("%Y%m%d%H%M%S")
     box = [left_latitude, right_latitude, left_longitude, right_longitude]  # nlat, slat, wlon, elon:北（小），南（大），东（大），西（小）
+    dir_out = os.path.join(DATA_PICTURE, out_date_str)
     for time, data in datas.items():
         print(time)
         print(data)
@@ -194,7 +204,7 @@ def plot_data_map(data_type=None,
         print('lons', np.nanmin(lons), np.nanmean(lons), np.nanmax(lons), lons.shape)
         print('lats', np.nanmin(lats), np.nanmean(lats), np.nanmax(lats), lats.shape)
 
-        title = '{}'.format(data_type)
+        title = '{}  {}'.format(data_type, time)
         vmin = None
         vmax = None
         ticks = None
@@ -202,7 +212,6 @@ def plot_data_map(data_type=None,
         aeres = None
 
         filename_out = '{}_{}_{}.png'.format(taskChoice, data_type, time)
-        dir_out = os.path.join(DATA_PICTURE, out_date_str)
         file_out = os.path.join(dir_out, filename_out)
 
         # 是否重处理
@@ -212,19 +221,22 @@ def plot_data_map(data_type=None,
 
         plot_map(data, lons, lats, title=title, vmin=vmin, vmax=vmax,
                  areas=aeres, box=box, ticks=ticks, file_out=file_out,
-                 mksize=mksize)
-        return dir_out
+                 mksize=mksize, nanhai=nanhai)
+    return dir_out
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='GFSSI Schedule')
-    parser.add_argument('--dataType', '-t', help='数据类型(GHI/DBI/DHI/GTI/...)', required=True)
+    parser = argparse.ArgumentParser(description='Schedule')
+    parser.add_argument('--dataType', '-t', help='数据类型(GHI/DBI/DHI/GTI/H0/H20/H25)', required=True)
     parser.add_argument('--plotType', '-y', help='绘图类型(map column)', required=True)
-    parser.add_argument('--modeType', '-m', help='单点or范围(point、area、all、poor、province)', required=True)
+    parser.add_argument('--modeType', '-m', help='单点or范围(point、area、all、village、province)', required=True)
     parser.add_argument('--taskChoice', '-c',
-                        help='时间：year, month, season, quarter   '
-                             '任务: sum, mean, anomaly  '
-                             'yearSum, yearMean, yearAnomaly    ',
+                        help='时间：year, month, season, quarter'
+                             '任务: sum, mean, anomaly'
+                             'yearSum, yearMean, yearAnomaly,'
+                             'monthSum, monthMean, monthAnomaly,'
+                             'seasonSum, seasonMean, seasonAnomaly,'
+                             'quarterSum, quarterMean, quarterAnomaly,',
                         required=False)
     parser.add_argument('--dateStart', '-s', help='开始年份，YYYY(2019)', required=True)
     parser.add_argument('--dateEnd', '-e', help='结束年份，YYYY(2019)', required=True)
@@ -246,9 +258,9 @@ if __name__ == '__main__':
     DATA_TYPE = ['map', 'column']
     # ###################################### 分布图 ##############
     if args.plotType == 'map':
-        MODE_TYPE = ['area', 'all', 'poor', 'province']  # 区域类型
+        MODE_TYPE = ['area', 'all', 'village', 'province']  # 区域类型
 
-        if modeType == 'all' or modeType == 'poor' or modeType == 'province':
+        if modeType == 'all' or modeType == 'village' or modeType == 'province':
             leftLongitude = LONGITUDE_RANGE_China[0]
             leftLatitude = LATITUDE_RANGE_China[1]
             rightLongitude = LONGITUDE_RANGE_China[1]
@@ -256,8 +268,10 @@ if __name__ == '__main__':
 
             if modeType == 'province':
                 assert area is not None, '输入的 area 为空值: {}'.format(area)
-            elif modeType == 'poor':
-                area = 'poor'
+            elif modeType == 'village':
+                area = 'village'
+            elif modeType == 'all':
+                area = 'China'
 
         elif modeType == 'area':
             leftLongitude = args.leftLongitude
