@@ -14,6 +14,8 @@ SQLLITE_DB = r'sqlite:///{}'.format(DB_PATH)
 # 辅助文件
 DEM_TXT = os.path.join(AID_PATH, 'D_DEM.txt')
 DEM_HDF = os.path.join(AID_PATH, 'D_DEM.hdf')
+PRO_MASK_HDF = os.path.join(AID_PATH, 'province_mask_old.hdf')
+PRO_MASK_HDF_1KM = os.path.join(AID_PATH, 'province_mask_1km.hdf')
 
 COEF_TXT = os.path.join(AID_PATH, 'sta_mon_a_b_ok.txt')
 POOR_XLSX = os.path.join(AID_PATH, '贫困村站点经纬度.xlsx')

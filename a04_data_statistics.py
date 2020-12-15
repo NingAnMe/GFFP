@@ -12,6 +12,7 @@ from utils.config import get_datatype
 from utils.get_index_by_lonlat import get_point_index_by_lon_lat
 from utils.data import DemLoader
 from utils.hdf5 import get_hdf5_data, write_hdf5_and_compress
+from utils.config import PRO_MASK_HDF_1KM, DEM_HDF, PRO_MASK_HDF
 from collections import defaultdict
 from user_config import DATA_1KM, DATA_1KM_MONTH, DATA_1KM_SEASON, DATA_1KM_QUARTER, DATA_1KM_YEAR, DATA_STAT
 
@@ -1443,15 +1444,73 @@ def num_area(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatitu
         return ano_qua, lon, lat
 
 
+def num_province(dataType, province, taskChoice, dateStart, dateEnd, out_fi=0, avg=False):
+    # 获取掩码
+    sheng_dic = {'北京市': 2, '湖南省': 14,
+                 '天津市': 27, '广东省': 6,
+                 '河北省': 10, '广西壮族自治区': 7,
+                 '山西省': 25, '海南省': 9,
+                 '内蒙古自治区': 19, '重庆市': 3,
+                 '辽宁省': 18, '四川省': 26,
+                 '吉林省': 17, '贵州省': 8,
+                 '黑龙江省': 11, '云南省': 30,
+                 '上海市': 24, '西藏自治区': 29,
+                 '江苏省': 15, '陕西省': 22,
+                 '浙江省': 31, '甘肃省': 5,
+                 '安徽省': 1, '青海省': 21,
+                 '福建省': 4, '宁夏回族自治区': 20,
+                 '江西省': 16, '新疆维吾尔自治区': 28,
+                 '山东省': 23, '台湾省': 32,
+                 '河南省': 12, '香港特别行政区': 33,
+                 '湖北省': 13, '澳门特别行政区': 34, }
+    open_file_path = PRO_MASK_HDF_1KM
+    pro_data = get_hdf5_data(open_file_path, 'province_mask', 1, 0, [0, np.inf], np.nan)
+    print('province:', province)
+    print('avg:', avg)
+    if province != 'all':
+        for pr, pr_da in sheng_dic.items():
+            if province in pr:
+                print(pr)
+                pro_data[pro_data != pr_da] = 0
+    pro_bool = pro_data.astype(bool)
+    # 获取经纬度
+    file_path = DEM_HDF
+    lons = get_hdf5_data(file_path, 'lon', 1, 0, [0, np.inf], np.nan)
+    lats = get_hdf5_data(file_path, 'lat', 1, 0, [0, np.inf], np.nan)
+    leftLongitude, leftLatitude = lons[pro_bool], lats[pro_bool]
+    # 获取数据
+    data_dic, lons, lats = num_point(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatitude, out_fi)
+    # 输出到hdf
+    date_str = datetime.now().strftime("%Y%m%d%H%M%S")
+    out_data_dic = {}
+    avg_year = 0
+    for ad, da in data_dic.items():
+        out_data_dic[ad] = da.reshape(-1, 1)
+        if avg:
+            da = da[da.astype(bool)]
+            avg_year = np.nanmean(da)
+    avg_year_dic = {'avg_year': avg_year}
+    lon = lons.reshape(-1, 1)
+    lat = lats.reshape(-1, 1)
+    if avg:
+        data_point_to_txt(DATA_STAT, avg_year_dic, dataType)
+    else:
+        data_area_to_hdf(DATA_STAT, out_data_dic, lon, lat, dataType, date_str)
+    # return
+    return out_data_dic, lon, lat
+
+
 filterwarnings("ignore")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='GFSSI Schedule')
     parser.add_argument('--dataType', '-t', help='数据类型(GHI/DBI/DHI/GTI/...)', required=True)
-    parser.add_argument('--modeType', '-m', help='单点or范围(point或area)', required=True)
+    parser.add_argument('--modeType', '-m', help='单点or范围or省or全国(point或area或province或all)', required=True)
+    parser.add_argument('--province', '-z', help='省名称（汉字）', required=False)
+    parser.add_argument('--avg', '-g', help='区域平均值（True）', required=False)
     parser.add_argument('--taskChoice', '-c',
                         help='时间：year, month, season, quarter   '
-                             '任务: sum, mean, anomaly  '
+                             '任务: sum, mean, anomaly,'
                              'yearSum, yearMean, yearAnomaly,'
                              'monthSum, monthMean, monthAnomaly,'
                              'seasonSum, seasonMean, seasonAnomaly,'
@@ -1459,8 +1518,8 @@ if __name__ == '__main__':
                         required=False)
     parser.add_argument('--dateStart', '-s', help='开始年份，YYYY(2019)', required=True)
     parser.add_argument('--dateEnd', '-e', help='结束年份，YYYY(2019)', required=True)
-    parser.add_argument('--leftLongitude', '-l', help='经度或左上角经度，47.302235', required=True)
-    parser.add_argument('--leftLatitude', '-a', help='纬度或左上角纬度，85.880519', required=True)
+    parser.add_argument('--leftLongitude', '-l', help='经度或左上角经度，47.302235', required=False)
+    parser.add_argument('--leftLatitude', '-a', help='纬度或左上角纬度，85.880519', required=False)
     parser.add_argument('--rightLongitude', '-r', help='右下角经度，47.302235', required=False)
     parser.add_argument('--rightLatitude', '-i', help='右下角纬度，85.880519', required=False)
     args = parser.parse_args()
@@ -1476,3 +1535,27 @@ if __name__ == '__main__':
         n_a = num_area(args.dataType, args.taskChoice, args.dateStart, args.dateEnd, args.leftLongitude,
                        args.leftLatitude, args.rightLongitude, args.rightLatitude)
         # print(n_a)
+    elif args.modeType == 'province':
+        print(args.dataType, args.province, args.taskChoice, args.dateStart, args.dateEnd)
+        num_province(args.dataType, args.province, args.taskChoice, args.dateStart, args.dateEnd)
+    elif args.modeType == 'all':
+        print(args.dataType, 'all', args.taskChoice, args.dateStart, args.dateEnd, args.avg)
+        if args.avg:
+            num_province(args.dataType, 'all', args.taskChoice, args.dateStart, args.dateEnd, avg=args.avg)
+        else:
+            num_province(args.dataType, 'all', args.taskChoice, args.dateStart, args.dateEnd)
+    '''
+    python3 a04_data_statistics.py -t GHI -m province -z 山东  -c yearSum -s 2019 -e 2019
+    python3 a04_data_statistics.py -t GHI -m province -z 山东  -c yearMean -s 2019 -e 2019
+    python3 a04_data_statistics.py -t GHI -m province -z 山东  -c yearAnomaly -s 2019 -e 2019
+    python3 a04_data_statistics.py -t GHI -m province -z 山东  -c monthSum  -s 2019 -e 2019
+    python3 a04_data_statistics.py -t GHI -m province -z 山东  -c monthMean -s 2019 -e 2019 
+    python3 a04_data_statistics.py -t GHI -m province -z 山东  -c monthAnomaly -s 2019 -e 2019 
+    python3 a04_data_statistics.py -t GHI -m province -z 山东  -c seasonSum -s 2019 -e 2019 
+    python3 a04_data_statistics.py -t GHI -m province -z 山东  -c seasonMean -s 2019 -e 2019
+    python3 a04_data_statistics.py -t GHI -m province -z 山东  -c seasonAnomaly -s 2019 -e 2019 
+    python3 a04_data_statistics.py -t GHI -m province -z 山东  -c quarterSum -s 2019 -e 2019 
+    python3 a04_data_statistics.py -t GHI -m province -z 山东  -c quarterMean -s 2019 -e 2019
+    python3 a04_data_statistics.py -t GHI -m province -z 山东  -c quarterAnomaly -s 2019 -e 2019
+    python3 a04_data_statistics.py -t GHI -m all -c yearMean -s 2019 -e 2019 -g True
+    '''
