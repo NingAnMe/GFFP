@@ -1,0 +1,12 @@
+分布图：区域
+/DISK/DATA02/KTS_LIB/miniconda3/bin/python3 /home/kts_project_v1/gffp/a05_data_plot.py -t GHI -y map -m area -c yearSum -s 2019 -e 2019 -l 70 -a 55 -r 140 -i 15
+
+分布图：全国
+/DISK/DATA02/KTS_LIB/miniconda3/bin/python3 /home/kts_project_v1/gffp/a05_data_plot.py -t GHI -y map -m all -c yearSum -s 2019 -e 2019
+
+分布图：贫困村
+/DISK/DATA02/KTS_LIB/miniconda3/bin/python3 /home/kts_project_v1/gffp/a05_data_plot.py -t GHI -y map -m poor -c yearSum -s 2019 -e 2019
+
+分布图：省份
+/DISK/DATA02/KTS_LIB/miniconda3/bin/python3 /home/kts_project_v1/gffp/a05_data_plot.py -t GHI -y map -m province -z 河北省 -c yearSum -s 2019 -e 2019
+

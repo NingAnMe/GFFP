@@ -230,8 +230,8 @@ class Coef(Base):
         return data
 
 
-class Poor(Base):
-    __tablename__ = "poor"
+class Village(Base):
+    __tablename__ = "village"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     code = Column(String)
@@ -254,31 +254,31 @@ class Poor(Base):
 
     @classmethod
     def add(cls, session, data):
-        if isinstance(data, Poor):
+        if isinstance(data, Village):
             session.add(data)
         elif isinstance(data, dict):
-            data = Poor(**data)
+            data = Village(**data)
             session.add(data)
         elif isinstance(data, list):
-            session.bulk_insert_mappings(Poor, data)
+            session.bulk_insert_mappings(Village, data)
         else:
             print('type error')
 
     @classmethod
     def update(cls, session, data):
-        if isinstance(data, Poor):
+        if isinstance(data, Village):
             session.update(data)
         elif isinstance(data, dict):
-            data = Poor(**data)
+            data = Village(**data)
             session.update(data)
         elif isinstance(data, list):
-            session.bulk_update_mappings(Poor, data)
+            session.bulk_update_mappings(Village, data)
         else:
             print('type error')
 
     @classmethod
     def query(cls, session):
-        return session.query(Poor).all()
+        return session.query(Village).all()
 
     @classmethod
     def excil2db_poor(cls, ex):
@@ -298,12 +298,33 @@ class Poor(Base):
                     'lon': float(data_m[8]),
                 }
                 ds.append(d)
-            Poor.add(session, ds)
-            rows = Poor.query(session)
+            Village.add(session, ds)
+            rows = Village.query(session)
             for row in rows:
                 print(row)
                 print(row.to_dict()
                       )
+
+    @classmethod
+    def get_village_info_by_file(cls, file_in):
+        """
+        :param file_in:
+        :return:
+        """
+        dtype = {
+            0: str,
+            1: str,
+            2: str,
+            3: str,
+            4: str,
+            5: str,
+            6: str,
+            7: float,
+            8: float,
+        }
+        data = pd.read_excel(file_in, index_col=0, dtype=dtype)
+        data.columns = ['code', 'sheng', 'shi', 'xian', 'xiang', 'cun', 'lat', 'lon']
+        return data
 
 
 def txt2db_ssi(file_in):
@@ -358,70 +379,6 @@ def txt2db_coef():
                   )
 
 
-def t_Station():
-    with session_scope() as session:
-        d = Station(
-            station='50246',
-            date=date(2020, 1, 1),
-            GHI=1000,
-            DBI=1000,
-            DHI=1000,
-            GTI=1000,
-            H0=1000,
-            H20=1000,
-            H25=1000
-        )
-        Station.add(session, d)
-
-        d = {
-            'station': '50246',
-            'date': date(2020, 1, 1),
-            'GHI': 1000,
-            'DBI': 1000,
-            'DHI': 1000,
-            'GTI': 1000,
-            'H0': 1000,
-            'H20': 1000,
-            'H25': 1000
-        }
-        Station.add(session, d)
-
-        ds = [
-            {
-                'station': '50247',
-                'date': date(2020, 1, 1),
-                'GHI': 1000,
-                'DBI': 1000,
-                'DHI': 1000,
-                'GTI': 1000,
-                'H0': 1000,
-                'H20': 1000,
-                'H25': 1000
-            },
-            {
-                'station': '50248',
-                'date': date(2020, 1, 1),
-                'GHI': 1000,
-                'DBI': 1000,
-                'DHI': 1000,
-                'GTI': 1000,
-                'H0': 1000,
-                'H20': 1000,
-                'H25': 1000
-            },
-        ]
-        Station.add(session, ds)
-
-        rows = Station.query(session)
-        for row in rows:
-            print(row)
-            print(row.to_dict())
-        rows = Station.query_by_station(session, '50246')
-        for row in rows:
-            print(row)
-            print(row.to_dict())
-
-
 if not os.path.isfile(DB_PATH):
     print('数据库不存在，创建数据库:{}'.format(DB_PATH))
     Base.metadata.create_all(engine)
@@ -438,3 +395,6 @@ if __name__ == '__main__':
     # txt2db_coef()
     # file_in = 'D:\project\py\gz\ky\gffp\提供样例数据\提供样例数据\\2019_rz.txt'
     # txt2db_ssi(file_in)
+    # from utils.config import POOR_XLSX
+    # data = Poor.get_poor_info_by_file(POOR_XLSX)
+    # print(data.head())
