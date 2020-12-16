@@ -417,7 +417,7 @@ if __name__ == '__main__':
     # t_station_info()
     # t_()
     # t_cal_station()
-    t_cal_1km()
+    # t_cal_1km()
     """
     stationInfoFile : str 站点信息
     stationSolarFile :str 光伏数据
