@@ -12,7 +12,7 @@ from utils.config import get_datatype
 from utils.get_index_by_lonlat import get_point_index_by_lon_lat
 from utils.data import DemLoader
 from utils.hdf5 import get_hdf5_data, write_hdf5_and_compress
-from utils.config import PRO_MASK_HDF_1KM, DEM_HDF, PRO_MASK_HDF
+from utils.config import  DEM_HDF, PRO_MASK_HDF
 from collections import defaultdict
 from user_config import DATA_1KM, DATA_1KM_MONTH, DATA_1KM_SEASON, DATA_1KM_QUARTER, DATA_1KM_YEAR, DATA_STAT
 
@@ -22,7 +22,9 @@ task_dict = {
 }
 '''
 1）输入单点经纬度，输出txt格式的数据；
-2）输入区域经纬度范围，输出
+2）输入区域经纬度范围，输出hdf
+3）输入省级名称，输出省级数据
+4）输入all，输出全国数据
 '''
 
 
@@ -76,7 +78,6 @@ def years_sum_point(date_start, date_end, data, row, col):  # R
         print(year)
         print('year_point_data', year_point_data)
         years_num_p[year] = year_point_data
-
     return years_num_p
 
 
@@ -1463,7 +1464,7 @@ def num_province(dataType, province, taskChoice, dateStart, dateEnd, out_fi=0, a
                  '山东省': 23, '台湾省': 32,
                  '河南省': 12, '香港特别行政区': 33,
                  '湖北省': 13, '澳门特别行政区': 34, }
-    open_file_path = PRO_MASK_HDF_1KM
+    open_file_path = PRO_MASK_HDF
     pro_data = get_hdf5_data(open_file_path, 'province_mask', 1, 0, [0, np.inf], np.nan)
     print('province:', province)
     print('avg:', avg)
