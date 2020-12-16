@@ -12,7 +12,7 @@ from utils.config import get_datatype
 from utils.get_index_by_lonlat import get_point_index_by_lon_lat
 from utils.data import DemLoader
 from utils.hdf5 import get_hdf5_data, write_hdf5_and_compress
-from utils.config import  DEM_HDF, PRO_MASK_HDF
+from utils.config import DEM_HDF, PRO_MASK_HDF
 from collections import defaultdict
 from user_config import DATA_1KM, DATA_1KM_MONTH, DATA_1KM_SEASON, DATA_1KM_QUARTER, DATA_1KM_YEAR, DATA_STAT
 
@@ -503,30 +503,6 @@ def get_sea_mean(data_sea, dateStart, dateEnd):
     return mean
 
 
-def get_sea_mean_area(data_sea, dateStart, dateEnd):
-    sea_lsit = [[], [], [], []]
-    for sea_key, data in data_sea.items():
-        filename = os.path.split(sea_key)[1]
-        # print(filename)
-        sea_str = str(filename).split('_')[1]
-        print('sea_str', sea_str)
-        if sea_str == 'MAM':
-            sea_lsit[0].append(data)
-        elif sea_str == 'JJA':
-            sea_lsit[1].append(data)
-        elif sea_str == 'SON':
-            sea_lsit[2].append(data)
-        elif sea_str == 'DJF':
-            sea_lsit[3].append(data)
-    mean = {}
-    len_year = int(dateEnd) - int(dateStart) + 1
-    mean['MAM'] = ave_a(sea_lsit[0], len_year)
-    mean['JJA'] = ave_a(sea_lsit[1], len_year)
-    mean['SON'] = ave_a(sea_lsit[2], len_year)
-    if len_year != 1:
-        mean['DJF'] = ave_a(sea_lsit[3], len_year - 1)
-    return mean
-
 
 def get_sea_ano(data_sea, mean_sea, dateStart, dateEnd):
     mean = mean_sea
@@ -549,25 +525,6 @@ def get_sea_ano(data_sea, mean_sea, dateStart, dateEnd):
     return jp_dic
 
 
-def get_sea_ano_area(data_sea, mean_sea, dateStart, dateEnd):
-    mean = mean_sea
-    jp_dic = {}
-    jp = np.ndarray
-    for sea_key, data in data_sea.items():
-        filename = os.path.split(sea_key)[1]
-        # print(filename)
-        sea_str = str(filename).split('_')[1]
-        print('sea_str', sea_str)
-        if sea_str == 'MAM':
-            jp = juping_a(data, mean['MAM'])
-        elif sea_str == 'JJA':
-            jp = juping_a(data, mean['JJA'])
-        elif sea_str == 'SON':
-            jp = juping_a(data, mean['SON'])
-        elif sea_str == 'DJF':
-            jp = juping_a(data, mean['DJF'])
-        jp_dic[sea_key] = jp
-    return jp_dic
 
 
 def get_file_qua(files, date_start, date_end):  # R
@@ -669,52 +626,7 @@ def get_qua_mean(data_sea, dateStart, dateEnd):
     return mean
 
 
-def get_qua_mean_a(data_sea, dateStart, dateEnd):
-    sea_lsit = [[], [], [], []]
-    for sea_key, data in data_sea.items():
-        filename = os.path.split(sea_key)[1]
-        # print(filename)
-        sea_str = str(filename).split('_')[1]
-        print('sea_str', sea_str)
-        if sea_str == 'fir':
-            sea_lsit[0].append(data)
-        elif sea_str == 'sec':
-            sea_lsit[1].append(data)
-        elif sea_str == 'thr':
-            sea_lsit[2].append(data)
-        elif sea_str == 'fou':
-            sea_lsit[3].append(data)
-    mean = {}
-    len_year = int(dateEnd) - int(dateStart) + 1
-    mean['fir'] = ave_a(sea_lsit[0], len_year)
-    mean['sec'] = ave_a(sea_lsit[1], len_year)
-    mean['thr'] = ave_a(sea_lsit[2], len_year)
-    mean['fou'] = ave_a(sea_lsit[3], len_year)
-    return mean
-
-
 def get_qua_ano(data_sea, mean_sea, dateStart, dateEnd):
-    mean = mean_sea
-    jp_dic = {}
-    jp = np.ndarray
-    for sea_key, data in data_sea.items():
-        filename = os.path.split(sea_key)[1]
-        # print(filename)
-        sea_str = str(filename).split('_')[1]
-        print('sea_str', sea_str)
-        if sea_str == 'fir':
-            jp = juping_a(data, mean['fir'])
-        elif sea_str == 'sec':
-            jp = juping_a(data, mean['sec'])
-        elif sea_str == 'thr':
-            jp = juping_a(data, mean['thr'])
-        elif sea_str == 'fou':
-            jp = juping_a(data, mean['fou'])
-        jp_dic[sea_key] = jp
-    return jp_dic
-
-
-def get_qua_ano_a(data_sea, mean_sea, dateStart, dateEnd):
     mean = mean_sea
     jp_dic = {}
     jp = np.ndarray
@@ -1373,7 +1285,7 @@ def num_area(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatitu
             sea_file_dic = get_file_sea_hdf(s_l)
             data_sea, lon, lat = get_hdf_dic_data_area(sea_file_dic, path, dataType, row_min, row_max, col_min,
                                                        col_max)
-        mean_sea = get_sea_mean_area(data_sea, dateStart, dateEnd)
+        mean_sea = get_sea_mean(data_sea, dateStart, dateEnd)
         if out_fi == 1:
             data_area_to_hdf(DATA_STAT, mean_sea, lon, lat, dataType, date_str)
         return mean_sea, lon, lat
@@ -1389,8 +1301,8 @@ def num_area(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatitu
             sea_file_dic = get_file_sea_hdf(s_l)
             data_sea, lon, lat = get_hdf_dic_data_area(sea_file_dic, path, dataType, row_min, row_max, col_min,
                                                        col_max)
-        mean_sea = get_sea_mean_area(data_sea, dateStart, dateEnd)
-        ano_sea = get_sea_ano_area(data_sea, mean_sea, dateStart, dateEnd)
+        mean_sea = get_sea_mean(data_sea, dateStart, dateEnd)
+        ano_sea = get_sea_ano(data_sea, mean_sea, dateStart, dateEnd)
         if out_fi == 1:
             data_area_to_hdf(DATA_STAT, ano_sea, lon, lat, dataType, date_str)
         return ano_sea, lon, lat
@@ -1422,7 +1334,7 @@ def num_area(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatitu
             qua_file_dic = get_file_qua_hdf(q_l)
             data_qua, lon, lat = get_hdf_dic_data_area(qua_file_dic, path, dataType, row_min, row_max, col_min,
                                                        col_max)
-        mean_qua = get_qua_mean_a(data_qua, dateStart, dateEnd)
+        mean_qua = get_qua_mean(data_qua, dateStart, dateEnd)
         if out_fi == 1:
             data_area_to_hdf(DATA_STAT, mean_qua, lon, lat, dataType, date_str)
         return mean_qua, lon, lat
@@ -1438,8 +1350,8 @@ def num_area(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatitu
             qua_file_dic = get_file_qua_hdf(q_l)
             data_qua, lon, lat = get_hdf_dic_data_area(qua_file_dic, path, dataType, row_min, row_max, col_min,
                                                        col_max)
-        mean_qua = get_qua_mean_a(data_qua, dateStart, dateEnd)
-        ano_qua = get_qua_ano_a(data_qua, mean_qua, dateStart, dateEnd)
+        mean_qua = get_qua_mean(data_qua, dateStart, dateEnd)
+        ano_qua = get_qua_ano(data_qua, mean_qua, dateStart, dateEnd)
         if out_fi == 1:
             data_area_to_hdf(DATA_STAT, ano_qua, lon, lat, dataType, date_str)
         return ano_qua, lon, lat
@@ -1507,7 +1419,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='GFSSI Schedule')
     parser.add_argument('--dataType', '-t', help='数据类型(GHI/DBI/DHI/GTI/...)', required=True)
     parser.add_argument('--modeType', '-m', help='单点or范围or省or全国(point或area或province或all)', required=True)
-    parser.add_argument('--province', '-z', help='省名称（汉字）', required=False)
+    parser.add_argument('--province', '-z', help='省级行政区域名称（汉字）', required=False)
     parser.add_argument('--avg', '-g', help='区域平均值（True）', required=False)
     parser.add_argument('--taskChoice', '-c',
                         help='时间：year, month, season, quarter   '
