@@ -492,10 +492,9 @@ def get_sea_mean(data_sea):
             sea_list[2].append(data)
         elif sea_str == 'DJF':
             sea_list[3].append(data)
-    mean = {}
-    mean['MAM'] = ave_a(sea_list[0], len(sea_list[0]))
-    mean['JJA'] = ave_a(sea_list[1], len(sea_list[0]))
-    mean['SON'] = ave_a(sea_list[2], len(sea_list[0]))
+    mean = {'MAM': ave_a(sea_list[0], len(sea_list[0])),
+            'JJA': ave_a(sea_list[1], len(sea_list[0])),
+            'SON': ave_a(sea_list[2], len(sea_list[0]))}
     if sea_list[3]:
         mean['DJF'] = ave_a(sea_list[3], len(sea_list[3]))
     return mean
@@ -612,11 +611,12 @@ def get_qua_mean(data_sea):
             sea_list[2].append(data)
         elif sea_str == 'fou':
             sea_list[3].append(data)
-    mean = {}
-    mean['fir'] = ave_a(sea_list[0], len(sea_list[0]))
-    mean['sec'] = ave_a(sea_list[1], len(sea_list[0]))
-    mean['thr'] = ave_a(sea_list[2], len(sea_list[0]))
-    mean['fou'] = ave_a(sea_list[3], len(sea_list[0]))
+    mean = {
+        'fir': ave_a(sea_list[0], len(sea_list[0])),
+        'sec': ave_a(sea_list[1], len(sea_list[0])),
+        'thr': ave_a(sea_list[2], len(sea_list[0])),
+        'fou': ave_a(sea_list[3], len(sea_list[0]))
+            }
     return mean
 
 
@@ -769,7 +769,6 @@ def get_year_data(date_start, date_end, data_path, data_type, year_file_list=Non
             year_str_list.append(year_str)
     results_return = dict()
     for year, files_one_year in get_file_year(files).items():
-        a = 1
         if str(year) in year_str_list:
             file_hdf = os.path.join(DATA_1KM_YEAR, '{}/{}_{}.hdf'.format(data_type, data_type, year))
             sum_year = get_hdf5_data(file_hdf, data_type, 1, 0, [0, np.inf], np.nan)
@@ -905,7 +904,6 @@ def get_qua_data(date_start, date_end, data_type, row, col, file_list=None):  # 
     for year, files_one_year in get_file_qua(files).items():
         for sea, mon_dic in files_one_year.items():
             a = 0
-            sea_sum = np.ndarray
             sea_key = '{}_{}'.format(year, sea)
             file_name = '{}_{}.hdf'.format(year, sea)
             if file_name in str_list:
@@ -1129,7 +1127,7 @@ def num_point(dataType, taskChoice, dateStart, dateEnd, left_longitude, left_lat
     elif task in [7, 8, 9]:
         print('任务：', taskChoice)
         s_l = judge_file(dateStart, dateEnd, dataType, 'sea')
-        if s_l == 0 or len(s_l) < ((int(dateEnd) - int(dateStart) + 1)) * 4 - 1:
+        if s_l == 0 or len(s_l) < (int(dateEnd) - int(dateStart) + 1) * 4 - 1:
             data_sea, lon, lat = get_sea_data(dateStart, dateEnd, dataType, row, col, s_l)
             print('data_sea:', data_sea)
         else:
@@ -1147,7 +1145,7 @@ def num_point(dataType, taskChoice, dateStart, dateEnd, left_longitude, left_lat
             return mean_sea, lon, lat
         if int(dateAnomaly) != 0:
             s_l = judge_file(dateAnomaly, dateAnomaly, dataType, 'sea')
-            if s_l == 0 or len(s_l) < ((int(dateAnomaly) - int(dateAnomaly) + 1)) * 4 - 1:
+            if s_l == 0 or len(s_l) < (int(dateAnomaly) - int(dateAnomaly) + 1) * 4 - 1:
                 data_sea, lon, lat = get_sea_data(dateAnomaly, dateAnomaly, dataType, row, col, s_l)
                 print('data_sea:', data_sea)
             else:
@@ -1161,7 +1159,7 @@ def num_point(dataType, taskChoice, dateStart, dateEnd, left_longitude, left_lat
     elif task in [10, 11, 12]:
         print('任务：', taskChoice)
         q_l = judge_file(dateStart, dateEnd, dataType, 'qua')
-        if q_l == 0 or len(q_l) < ((int(dateEnd) - int(dateStart) + 1)) * 4:
+        if q_l == 0 or len(q_l) < (int(dateEnd) - int(dateStart) + 1) * 4:
             data_qua, lon, lat = get_qua_data(dateStart, dateEnd, dataType, row, col, q_l)
             print('data_qua:', data_qua)
         else:
@@ -1179,7 +1177,7 @@ def num_point(dataType, taskChoice, dateStart, dateEnd, left_longitude, left_lat
             return mean_qua, lon, lat
         if int(dateAnomaly) != 0:
             q_l = judge_file(dateAnomaly, dateAnomaly, dataType, 'qua')
-            if q_l == 0 or len(q_l) < ((int(dateAnomaly) - int(dateAnomaly) + 1)) * 4:
+            if q_l == 0 or len(q_l) < (int(dateAnomaly) - int(dateAnomaly) + 1) * 4:
                 data_qua, lon, lat = get_qua_data(dateAnomaly, dateAnomaly, dataType, row, col, q_l)
                 print('data_qua:', data_qua)
             else:
@@ -1294,7 +1292,7 @@ def num_area(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatitu
     elif task in [7, 8, 9]:
         print('任务：', taskChoice)
         s_l = judge_file(dateStart, dateEnd, dataType, 'sea')
-        if s_l == 0 or len(s_l) < ((int(dateEnd) - int(dateStart) + 1)) * 4 - 1:
+        if s_l == 0 or len(s_l) < (int(dateEnd) - int(dateStart) + 1) * 4 - 1:
             data_sea, lon, lat = get_sea_data_area(dateStart, dateEnd, dataType, row_min, row_max, col_min,
                                                    col_max, s_l)
             print('data_sea:', data_sea)
@@ -1314,7 +1312,7 @@ def num_area(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatitu
             return mean_sea, lon, lat
         if int(dateAnomaly) != 0:
             s_l = judge_file(dateAnomaly, dateAnomaly, dataType, 'sea')
-            if s_l == 0 or len(s_l) < ((int(dateAnomaly) - int(dateAnomaly) + 1)) * 4 - 1:
+            if s_l == 0 or len(s_l) < (int(dateAnomaly) - int(dateAnomaly) + 1) * 4 - 1:
                 data_sea, lon, lat = get_sea_data_area(dateAnomaly, dateAnomaly, dataType, row_min, row_max, col_min,
                                                        col_max, s_l)
                 print('data_sea:', data_sea)
@@ -1330,7 +1328,7 @@ def num_area(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatitu
     elif task in [10, 11, 12]:
         print('任务：', taskChoice)
         q_l = judge_file(dateStart, dateEnd, dataType, 'qua')
-        if q_l == 0 or len(q_l) < ((int(dateEnd) - int(dateStart) + 1)) * 4:
+        if q_l == 0 or len(q_l) < (int(dateEnd) - int(dateStart) + 1) * 4:
             data_qua, lon, lat = get_qua_data_area(dateStart, dateEnd, dataType, row_min, row_max, col_min,
                                                    col_max, q_l)
             print('data_qua:', data_qua)
@@ -1351,7 +1349,7 @@ def num_area(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatitu
             return mean_qua, lon, lat
         if int(dateAnomaly) != 0:
             q_l = judge_file(dateAnomaly, dateAnomaly, dataType, 'qua')
-            if q_l == 0 or len(q_l) < ((int(dateAnomaly) - int(dateAnomaly) + 1)) * 4:
+            if q_l == 0 or len(q_l) < (int(dateAnomaly) - int(dateAnomaly) + 1) * 4:
                 data_qua, lon, lat = get_qua_data_area(dateAnomaly, dateAnomaly, dataType, row_min, row_max, col_min,
                                                        col_max, q_l)
                 print('data_qua:', data_qua)
@@ -1414,7 +1412,6 @@ def num_province(dataType, province, taskChoice, dateStart, dateEnd, out_fi=0, a
     # 输出到hdf
     date_str = datetime.now().strftime("%Y%m%d%H%M%S")
     out_data_dic = {}
-    avg_year = 0
     avg_year_dic = {}
     for ad, da in data_dic.items():
         out_data_dic[ad] = da.reshape(-1, 1)
@@ -1460,33 +1457,33 @@ if __name__ == '__main__':
     parser.add_argument('--rightLatitude', '-i', help='右下角纬度，85.880519', required=False)
     args = parser.parse_args()
     if args.dateAnomaly:
-        dateAnomaly = args.dateAnomaly
+        date_anomaly = args.dateAnomaly
     else:
-        dateAnomaly = 0
+        date_anomaly = 0
     if args.modeType == 'point':
         print(args.dataType, args.taskChoice, args.dateStart, args.dateEnd, args.leftLongitude, args.leftLatitude,
-              dateAnomaly)
+              date_anomaly)
         n_p = num_point(args.dataType, args.taskChoice, args.dateStart, args.dateEnd, args.leftLongitude,
-                        args.leftLatitude, dateAnomaly=dateAnomaly)
+                        args.leftLatitude, dateAnomaly=date_anomaly)
         # print(n_p)
     elif args.modeType == 'area':
         print(args.dataType, args.taskChoice, args.dateStart, args.dateEnd, args.leftLongitude,
-              args.leftLatitude, args.rightLongitude, args.rightLatitude, dateAnomaly)
+              args.leftLatitude, args.rightLongitude, args.rightLatitude, date_anomaly)
         n_a = num_area(args.dataType, args.taskChoice, args.dateStart, args.dateEnd, args.leftLongitude,
-                       args.leftLatitude, args.rightLongitude, args.rightLatitude, dateAnomaly=dateAnomaly)
+                       args.leftLatitude, args.rightLongitude, args.rightLatitude, dateAnomaly=date_anomaly)
         # print(n_a)
     elif args.modeType == 'province':
-        print(args.dataType, args.province, args.taskChoice, args.dateStart, args.dateEnd, dateAnomaly)
+        print(args.dataType, args.province, args.taskChoice, args.dateStart, args.dateEnd, date_anomaly)
         num_province(args.dataType, args.province, args.taskChoice, args.dateStart, args.dateEnd,
-                     dateAnomaly=dateAnomaly)
+                     dateAnomaly=date_anomaly)
     elif args.modeType == 'all':
-        print(args.dataType, 'all', args.taskChoice, args.dateStart, args.dateEnd, args.avg, dateAnomaly)
+        print(args.dataType, 'all', args.taskChoice, args.dateStart, args.dateEnd, args.avg, date_anomaly)
         if args.avg:
             num_province(args.dataType, 'all', args.taskChoice, args.dateStart, args.dateEnd, avg=args.avg,
-                         dateAnomaly=dateAnomaly)
+                         dateAnomaly=date_anomaly)
         else:
             num_province(args.dataType, 'all', args.taskChoice, args.dateStart, args.dateEnd,
-                         dateAnomaly=dateAnomaly)
+                         dateAnomaly=date_anomaly)
     '''
     python3 a04_data_statistics.py -t GHI -m point  -c yearSum -s 2019 -e 2019 -l 113 -a 43
     python3 a04_data_statistics.py -t GHI -m point  -c yearMean -s 2019 -e 2019 -l 113 -a 43
