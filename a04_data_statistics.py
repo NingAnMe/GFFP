@@ -65,7 +65,7 @@ def year_sum(year_data):
     return num_year
 
 
-def years_sum_point(date_start, date_end, years_num, row, col):  # R
+def years_sum_point(years_num, row, col):  # R
     """
     :return: {year1 ; 年值,year2 ; 年值}
     """
@@ -754,7 +754,7 @@ def get_hdf_list_data_and_sum(files_list, path, data_type):  # R
     return sum_year, lon, lat
 
 
-def get_year_data(date_start, date_end, data_path, data_type, year_file_list=[]):  # R
+def get_year_data(date_start, date_end, data_path, data_type, year_file_list=None):  # R
     """
     :return: { year:data} lon lat
     """
@@ -783,7 +783,7 @@ def get_year_data(date_start, date_end, data_path, data_type, year_file_list=[])
     return results_return, lon, lat
 
 
-def get_sea_data(date_start, date_end, data_type, row, col, file_list=[]):  # R
+def get_sea_data(date_start, date_end, data_type, row, col, file_list=None):  # R
     """
     :return:  {key:data}
     """
@@ -835,7 +835,7 @@ def get_sea_data(date_start, date_end, data_type, row, col, file_list=[]):  # R
 
 
 def get_sea_data_area(date_start, date_end, data_type, row_min, row_max, col_min,
-                      col_max, file_list=[]):  # R
+                      col_max, file_list=None):  # R
     """
     :return:  {key:data}
     """
@@ -887,7 +887,7 @@ def get_sea_data_area(date_start, date_end, data_type, row_min, row_max, col_min
     return results_return, lon, lat
 
 
-def get_qua_data(date_start, date_end, data_type, row, col, file_list=[]):  # R
+def get_qua_data(date_start, date_end, data_type, row, col, file_list=None):  # R
     """
     :return:  {key:data}
     """
@@ -938,7 +938,7 @@ def get_qua_data(date_start, date_end, data_type, row, col, file_list=[]):  # R
 
 
 def get_qua_data_area(date_start, date_end, data_type, row_min, row_max, col_min,
-                      col_max, file_list=[]):  # R
+                      col_max, file_list=None):  # R
     """
     :return:  {key:data}
     """
@@ -1068,7 +1068,7 @@ def num_point(dataType, taskChoice, dateStart, dateEnd, left_longitude, left_lat
         else:
             path = DATA_1KM_YEAR
             data_year_2, lons, lats = get_hdf_list_data(y_l, path, dataType)
-        years_sum = years_sum_point(dateStart, dateEnd, data_year_2, row, col)
+        years_sum = years_sum_point(data_year_2, row, col)
         if task == 1:
             if out_fi == 1:
                 data_point_to_txt(DATA_STAT, years_sum, dataType)  # 输出至txt
@@ -1098,7 +1098,7 @@ def num_point(dataType, taskChoice, dateStart, dateEnd, left_longitude, left_lat
             else:
                 path = DATA_1KM_YEAR
                 data_year_2, lons, lats = get_hdf_list_data(y_l, path, dataType)
-            years_sum = years_sum_point(dateAnomaly, dateAnomaly, data_year_2, row, col)
+            years_sum = years_sum_point(data_year_2, row, col)
         for year, y_sum in years_sum.items():
             year_jp_all = juping_a(y_sum, year_ave)
             year_jp_all_dict[year] = year_jp_all
@@ -1404,7 +1404,7 @@ def num_province(dataType, province, taskChoice, dateStart, dateEnd, out_fi=0, a
             data_dic[ke] = da[pro_bool]
         lons, lats = lons[pro_bool], lats[pro_bool]
     else:
-        获取经纬度
+        # 获取经纬度
         file_path = DEM_HDF
         lons = get_hdf5_data(file_path, 'lon', 1, 0, [0, np.inf], np.nan)
         lats = get_hdf5_data(file_path, 'lat', 1, 0, [0, np.inf], np.nan)
