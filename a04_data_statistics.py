@@ -13,7 +13,7 @@ from utils.config import get_datatype
 from utils.get_index_by_lonlat import get_point_index_by_lon_lat
 from utils.data import DemLoader
 from utils.hdf5 import get_hdf5_data, write_hdf5_and_compress
-from utils.config import DEM_HDF, PRO_MASK_HDF
+from utils.config import DEM_HDF, PRO_MASK_HDF, PROVINCE_MASK
 from collections import defaultdict
 from user_config import DATA_1KM, DATA_1KM_MONTH, DATA_1KM_SEASON, DATA_1KM_QUARTER, DATA_1KM_YEAR, DATA_STAT
 
@@ -616,7 +616,7 @@ def get_qua_mean(data_sea):
         'sec': ave_a(sea_list[1], len(sea_list[0])),
         'thr': ave_a(sea_list[2], len(sea_list[0])),
         'fou': ave_a(sea_list[3], len(sea_list[0]))
-            }
+    }
     return mean
 
 
@@ -1366,23 +1366,7 @@ def num_area(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatitu
 
 def num_province(dataType, province, taskChoice, dateStart, dateEnd, out_fi=0, avg=False, out_fig=1, dateAnomaly=0):
     # 获取掩码
-    sheng_dic = {'北京市': 2, '湖南省': 14,
-                 '天津市': 27, '广东省': 6,
-                 '河北省': 10, '广西壮族自治区': 7,
-                 '山西省': 25, '海南省': 9,
-                 '内蒙古自治区': 19, '重庆市': 3,
-                 '辽宁省': 18, '四川省': 26,
-                 '吉林省': 17, '贵州省': 8,
-                 '黑龙江省': 11, '云南省': 30,
-                 '上海市': 24, '西藏自治区': 29,
-                 '江苏省': 15, '陕西省': 22,
-                 '浙江省': 31, '甘肃省': 5,
-                 '安徽省': 1, '青海省': 21,
-                 '福建省': 4, '宁夏回族自治区': 20,
-                 '江西省': 16, '新疆维吾尔自治区': 28,
-                 '山东省': 23, '台湾省': 32,
-                 '河南省': 12, '香港特别行政区': 33,
-                 '湖北省': 13, '澳门特别行政区': 34, }
+    sheng_dic = PROVINCE_MASK
     open_file_path = PRO_MASK_HDF
     pro_data = get_hdf5_data(open_file_path, 'province_mask', 1, 0, [0, np.inf], np.nan)
     print('province:', province)
