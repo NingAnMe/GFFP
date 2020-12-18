@@ -24,11 +24,14 @@ import pandas as pd
 
 from pylab import subplots_adjust
 from DV.dv_map import dv_map
-from utils import plot_stats as plts
 
 from user_config import DATA_1KM, DATA_STAT, DATA_PICTURE
-from utils.config import LATITUDE_RANGE_China, LONGITUDE_RANGE_China, POOR_XLSX, PRO_MASK_HDF
+
+from utils import plot_stats as plts
+from utils.hdf5 import get_hdf5_data
+from utils.config import LATITUDE_RANGE_China, LONGITUDE_RANGE_China, POOR_XLSX, PRO_MASK_HDF, PROVINCE_MASK
 from utils.model import Village
+
 from a04_data_statistics import num_area, num_point, num_province
 
 
@@ -102,6 +105,7 @@ def plot_map(data, lons, lats, title='', vmin=-np.inf, vmax=np.inf, areas=None, 
     # p.colorbar_extend = "max"
 
     # plot
+    print(latitude.shape, longitude.shape, value.shape)
     p.easyplot(latitude, longitude, value, vmin=vmin, vmax=vmax, box=box, markersize=mksize, ptype=ptype)
 
     # TODO 增加设置省份的功能
@@ -144,13 +148,23 @@ def plot_data_map(data_type=None,
                   task_choice='',
                   date_start=None,
                   date_end=None,
+                  date_choice=None,
                   area_value=None,
                   left_longitude=None,
                   left_latitude=None,
                   right_longitude=None,
                   right_latitude=None,
                   ):
-    print('开始获取数据：num_area')
+    print('data_type == : {}'.format(data_type))
+    print('task_choice == : {}'.format(task_choice))
+    print('date_start == : {}'.format(date_start))
+    print('date_end == : {}'.format(date_end))
+    print('date_choice == : {}'.format(date_choice))
+    print('area_value == : {}'.format(area_value))
+    print('left_longitude == : {}'.format(left_longitude))
+    print('left_latitude == : {}'.format(left_latitude))
+    print('right_longitude == : {}'.format(right_longitude))
+    print('right_latitude == : {}'.format(right_latitude))
 
     if area_value == 'village':  # 绘制全国的贫困村
         village_info = Village.get_village_info_by_file(POOR_XLSX)
@@ -161,21 +175,27 @@ def plot_data_map(data_type=None,
                                 taskChoice=task_choice,
                                 dateStart=date_start,
                                 dateEnd=date_end,
-                                leftLongitude=lons,
-                                leftLatitude=lats,
+                                dateChoice=date_choice,
+                                left_longitude=lons,
+                                left_latitude=lats,
                                 out_fi=0)
         mksize = 1
     else:
-        datas, lons, lats = num_area(dataType=data_type,
-                                     taskChoice=task_choice,
-                                     dateStart=date_start,
-                                     dateEnd=date_end,
-                                     leftLongitude=left_longitude,
-                                     leftLatitude=left_latitude,
-                                     rightLongitude=right_longitude,
-                                     rightLatitude=right_latitude,
-                                     out_fi=0)
+        result = num_area(dataType=data_type,
+                          taskChoice=task_choice,
+                          dateStart=date_start,
+                          dateEnd=date_end,
+                          dateChoice=date_choice,
+                          leftLongitude=left_longitude,
+                          leftLatitude=left_latitude,
+                          rightLongitude=right_longitude,
+                          rightLatitude=right_latitude,
+                          out_fi=0)
+        print(result)
+        datas, lons, lats = result
         mksize = 5
+    print(datas)
+    print(datas.keys())
 
     # 是否绘制南海
     if area_value == 'China':
@@ -230,6 +250,7 @@ def plot_data_column(data_type=None,
                      task_choice='',
                      date_start=None,
                      date_end=None,
+                     date_choice=None,
                      mode_type=None,
                      area_value=None,
                      left_longitude=None,
@@ -237,32 +258,80 @@ def plot_data_column(data_type=None,
                      right_longitude=None,
                      right_latitude=None,
                      ):
-    print('开始获取数据：{}'.format(area_value))
+    print('data_type == : {}'.format(data_type))
+    print('task_choice == : {}'.format(task_choice))
+    print('date_start == : {}'.format(date_start))
+    print('date_end == : {}'.format(date_end))
+    print('date_choice == : {}'.format(date_choice))
+    print('mode_type == : {}'.format(mode_type))
+    print('area_value == : {}'.format(area_value))
+    print('left_longitude == : {}'.format(left_longitude))
+    print('left_latitude == : {}'.format(left_latitude))
+    print('right_longitude == : {}'.format(right_longitude))
+    print('right_latitude == : {}'.format(right_latitude))
 
-    if mode_type == 'all' or mode_type == 'province':
-        datas, _, _ = num_province(dataType=data_type, province=area_value, taskChoice=task_choice,
-                                   dateStart=date_start, dateEnd=date_end, out_fi=0, avg=True)
+    if mode_type == 'all':  # 绘制所有省份的柱状图
+
+        datas, _, _ = num_area(dataType=data_type, taskChoice=task_choice,
+                               dateStart=date_start, dateEnd=date_end,
+                               dateChoice=date_choice,
+                               leftLongitude=float(LONGITUDE_RANGE_China[0]),
+                               leftLatitude=float(LATITUDE_RANGE_China[1]),
+                               rightLongitude=float(LONGITUDE_RANGE_China[1]),
+                               rightLatitude=float(LATITUDE_RANGE_China[0]),
+                               out_fi=0)
         print(datas)
-        x = list()  # 年份
-        y = list()  # 值
-        for k, v in datas.items():
-            x.append(k)
-            y.append(v)
-        # x = np.arange(2010, 2021)
-        # y = np.full_like(x, 13119.997)
-        out_date_str = datetime.now().strftime("%Y%m%d%H%M%S")
-        dir_out = os.path.join(DATA_PICTURE, out_date_str)
-        filename_out = '{}_{}_{}_{}.png'.format(task_choice, data_type, date_start, date_end)
+        pro_mask_data = get_hdf5_data(PRO_MASK_HDF, 'province_mask', 1, 0, [0, 255], 0)
+        if area_value == 'province':  # 按省份分组
+            x_y = dict()
+            if date_choice:
+                date_choice = int(date_choice)
+                datas = {date_choice: datas[date_choice]}
+            for time, data in datas.items():
+                x_y[time] = dict()
+                x = list()
+                y = list()
+                for sheng in PROVINCE_MASK:
+                    if sheng in {'台湾省', '香港', '澳门'}:
+                        continue
+                    data_mean = np.nanmean(data[pro_mask_data == PROVINCE_MASK[sheng]])
+                    x.append(sheng[:3])
+                    y.append(data_mean)
+                y, x = zip(*sorted(zip(y, x), reverse=False))
+                x_y[time]['y'] = y
+                x_y[time]['x'] = x
+
+        else:  # 按时间分组
+            x_y = {'time': {'x': list(),
+                            'y': list()}}
+            for time, data in datas.items():
+                x_y['time']['x'].append(time)
+                x_y['time']['y'].append(np.nanmean(data[pro_mask_data != 0]))
+
+    elif mode_type == 'village' and group_type == 'province':  # 绘制每个省贫困村的平均值的柱状图
+        pass
+    else:
+        raise ValueError(mode_type)
+
+    if 'Anomaly' in task_choice:
+        mean_line = False
+    else:
+        mean_line = True
+
+    out_date_str = datetime.now().strftime("%Y%m%d%H%M%S")
+    dir_out = os.path.join(DATA_PICTURE, out_date_str)
+    for group, x_y_ in x_y.items():
+        x = x_y_['x']
+        y = x_y_['y']
+        filename_out = '{}_{}_{}_{}_{}.png'.format(task_choice, data_type, date_start, date_end, group)
         file_out = os.path.join(dir_out, filename_out)
         title = '{}'.format(data_type)
         x_label = ' '
         y_label = '{}'.format(data_type)
         plts.plot_bar(x, y, out_file=file_out, title=title, x_label=x_label,
-                      y_label=y_label)
-    else:
-        raise ValueError(mode_type)
+                      y_label=y_label, data_type=area_value, mean_line=mean_line)
 
-    return ''
+    return dir_out
 
 
 if __name__ == '__main__':
@@ -280,6 +349,7 @@ if __name__ == '__main__':
                         required=False)
     parser.add_argument('--dateStart', '-s', help='开始年份，YYYY(2019)', required=True)
     parser.add_argument('--dateEnd', '-e', help='结束年份，YYYY(2019)', required=True)
+    parser.add_argument('--dateChoice', '-o', help='距平年份，YYYY(2019)', required=False)
     parser.add_argument('--area', '-z', help='区域值', required=False, default='全国')
     parser.add_argument('--leftLongitude', '-l', help='经度或左上角经度，47.302235', required=False)
     parser.add_argument('--leftLatitude', '-a', help='纬度或左上角纬度，85.880519', required=False)
@@ -289,6 +359,7 @@ if __name__ == '__main__':
 
     yearStart = args.dateStart
     yearEnd = args.dateEnd
+    yearChoice = args.dateChoice
 
     dataType = args.dataType
     modeType = args.modeType
@@ -347,6 +418,7 @@ if __name__ == '__main__':
             task_choice=args.taskChoice,
             date_start=yearStart,
             date_end=yearEnd,
+            date_choice=yearChoice,
             area_value=areaValue,
             left_longitude=leftLongitude,
             left_latitude=leftLatitude,
@@ -359,33 +431,90 @@ if __name__ == '__main__':
         print('绘制柱状图')
         MODE_TYPE = ['point', 'all', 'province']
 
-        if modeType == 'all' or modeType == 'village' or modeType == 'province':
-            if modeType == 'province':
-                assert areaValue is not None, '输入的 area 为空值: {}'.format(areaValue)
-            elif modeType == 'all':
-                areaValue = 'all'
+        if modeType == 'all':
+            AREA_TYPE = {'province', 'time'}
+            assert areaValue is not None, '输入的 area 需要为 {}'.format(AREA_TYPE)
+            assert areaValue in AREA_TYPE, '输入的 area 需要为 {}'.format(AREA_TYPE)
+        elif modeType == 'village':
+            AREA_TYPE = {'province', 'time'}
+            assert areaValue is not None, '输入的 area 需要为 {}'.format(AREA_TYPE)
+            assert areaValue in AREA_TYPE, '输入的 area 需要为 {}'.format(AREA_TYPE)
         else:
             raise ValueError('modeType 参数错误 :{}'.format(MODE_TYPE))
+
+        if areaValue == 'all':
+            leftLongitude = LONGITUDE_RANGE_China[0]
+            leftLatitude = LATITUDE_RANGE_China[1]
+            rightLongitude = LONGITUDE_RANGE_China[1]
+            rightLatitude = LATITUDE_RANGE_China[0]
+            leftLongitude = float(leftLongitude)
+            leftLatitude = float(leftLatitude)
+            rightLongitude = float(rightLongitude)
+            rightLatitude = float(rightLatitude)
+            assert leftLongitude >= LONGITUDE_RANGE_China[0]
+            assert leftLatitude <= LATITUDE_RANGE_China[1]
+            assert rightLongitude <= LONGITUDE_RANGE_China[1]
+            assert rightLatitude >= LATITUDE_RANGE_China[0]
+        else:
+            leftLongitude = None
+            leftLatitude = None
+            rightLongitude = None
+            rightLatitude = None
 
         dir_ = plot_data_column(
             data_type=args.dataType,
             task_choice=args.taskChoice,
             date_start=yearStart,
             date_end=yearEnd,
+            date_choice=yearChoice,
             mode_type=modeType,
             area_value=areaValue,
+            left_longitude=leftLongitude,
+            left_latitude=leftLatitude,
+            right_longitude=rightLongitude,
+            right_latitude=rightLatitude,
         )
-
+        print('finish{}'.format(dir_))
     else:
         raise ValueError('dataType 参数错误 :{}'.format(DATA_TYPE))
 
     """
     图1
-    python3 a05_data_plot.py -t GHI -y column -m all -c yearSum -s 2010 -e 2020
-    
+    python3 a05_data_plot.py -t GHI -y column -m all -z time -c yearSum -s 2010 -e 2020
+
     图2
     python3 a05_data_plot.py -t GHI -y map -m all -c yearSum -s 2020 -e 2020
-    
+
     图3
-    python3 a05_data_plot.py -t GHI -y map -m all -c yearAnomaly -s 2020 -e 2020
+    python3 a05_data_plot.py -t GHI -y map -m all -c yearAnomaly -s 2010 -e 2019 -o 2020
+
+    图4
+    python3 a05_data_plot.py -t GHI -y column -m all -z province -c yearAnomaly -s 2010 -e 2019 -o 2020
+    
+    图5
+    python3 a05_data_plot.py -t GHI -y column -m all -z time -c monthAnomaly -s 2010 -e 2019 -o 2020
+    
+    图6、7、8、9
+    python3 a05_data_plot.py -t GHI -y map -m all -c quarterAnomaly -s 2010 -e 2019 -o 2020
+    
+    图10
+    python3 a05_data_plot.py -t GTI -y map -m all -c yearSum -s 2020 -e 2020
+    
+    图11
+    python3 a05_data_plot.py -t GTI -y map -m all -c H0 -s 2020 -e 2020
+    
+    图12
+    python3 a05_data_plot.py -t GTI -y map -m all -c yearAnomaly -s 2010 -e 2019 -o 2020
+    
+    图13
+    python3 a05_data_plot.py -t GTI -y column -m all -z province -c yearAnomaly -s 2010 -e 2019 -o 2020
+
+    图14
+    python3 a05_data_plot.py -t GHI -y map -m village -c yearSum -s 2020 -e 2020
+    
+    图15
+    python3 a05_data_plot.py -t GHI -y map -m village -c yearAnomaly -s 2010 -e 2019 -o 2020
+    
+    图16
+    python3 a05_data_plot.py -t GHI -y column -m village -z province -c yearAnomaly -s 2010 -e 2019 -o 2020
     """
