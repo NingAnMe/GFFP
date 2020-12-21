@@ -19,7 +19,8 @@ from user_config import DATA_1KM, DATA_1KM_MONTH, DATA_1KM_SEASON, DATA_1KM_QUAR
 
 task_dict = {
     'yearSum': 1, 'yearMean': 2, 'yearAnomaly': 3, 'monthSum': 4, 'monthMean': 5, 'monthAnomaly': 6,
-    'seasonSum': 7, 'seasonMean': 8, 'seasonAnomaly': 9, 'quarterSum': 10, 'quarterMean': 11, 'quarterAnomaly': 12
+    'seasonSum': 7, 'seasonMean': 8, 'seasonAnomaly': 9, 'quarterSum': 10, 'quarterMean': 11, 'quarterAnomaly': 12,
+    'H0': 13, 'H20': 14, 'H25': 15
 }
 '''
 1）输入单点经纬度，输出txt格式的数据；
@@ -80,19 +81,18 @@ def years_sum_point(years_num, row, col):  # R
     return years_num_p
 
 
-def years_sum_area(date_start, date_end, data, row_min, row_max, col_min, col_max):  # R
+def years_sum_area(years_num, row_min, row_max, col_min, col_max):  # R
     """
      :return: {year1 ; 年值,year2 ; 年值}
     """
-    years_num = data
     print(years_num)
     years_num_p = dict()
-    for year in np.arange(int(date_start), int(date_end) + 1):
-        year_sum_p = years_num[year]
-        year_area_data = year_sum_p[int(row_min):int(row_max) + 1, int(col_min):int(col_max) + 1]
+    for year, data in years_num.items():
+        print(row_min, row_max, col_min, col_max)
+        year_point_data = data[int(row_min):int(row_max) + 1, int(col_min):int(col_max) + 1]
         print(year)
-        print('year_area_data', year_area_data)
-        years_num_p[year] = year_area_data
+        print('year_area_data', year_point_data)
+        years_num_p[year] = year_point_data
     return years_num_p
 
 
@@ -107,7 +107,6 @@ def get_date_start_end(date_start, date_end, data_type):  # R
     file_list = []
     for file_ in os.listdir(data_path):
         filename = os.path.split(file_)[1]
-        print(filename)
         date_str = str(filename).split('_')[1]
         file_date = date(int(date_str[:4]), int(date_str[4:6]), 1)
         # print(file_date)
@@ -144,8 +143,10 @@ def judge_file(date_start, date_end, data_type, task_name):  # R
     print(date_start, date_end, data_type)
     if not os.path.exists(data_path):
         os.makedirs(data_path)
-        return 0
+        print('已创建文件夹', data_path)
     # GHI_2020_Fir.hdf
+    if data_type in ['H0', 'H20', 'H25']:
+        return 0
     file_list = []
     for file_ in os.listdir(data_path):
         filename = os.path.split(file_)[1]
@@ -649,7 +650,10 @@ def get_hdf_list_data(files_list, path, dataType):  # R
     print('files_list', files_list)
     for hdf in files_list:
         a += 1
-        year_name = int(hdf[4:8])
+        if dataType == 'H0':
+            year_name = int(hdf[3:7])
+        else:
+            year_name = int(hdf[4:8])
         data_path = os.path.join(path, dataType)
         file_hdf = '{}/{}'.format(data_path, hdf)
         print('file_hdf', file_hdf, dataType)
@@ -760,25 +764,45 @@ def get_year_data(date_start, date_end, data_path, data_type, year_file_list=Non
     """
     lon = np.ndarray
     lat = np.ndarray
-    files = get_date_start_end(date_start, date_end, data_type)  # 获取月数据分组文件
-    year_str_list = []
-    if year_file_list or year_file_list != 0:
-        print('已生成的缓存文件：', year_str_list)
-        for year_file in year_file_list:
-            year_str = year_file[4:8]
-            year_str_list.append(year_str)
     results_return = dict()
-    for year, files_one_year in get_file_year(files).items():
-        if str(year) in year_str_list:
-            file_hdf = os.path.join(DATA_1KM_YEAR, '{}/{}_{}.hdf'.format(data_type, data_type, year))
-            sum_year = get_hdf5_data(file_hdf, data_type, 1, 0, [0, np.inf], np.nan)
-            if not isinstance(lon.size, int):
-                lon = get_hdf5_data(file_hdf, 'lon', 1, 0, [0, np.inf], np.nan)
-                lat = get_hdf5_data(file_hdf, 'lat', 1, 0, [0, np.inf], np.nan)
-        else:
-            sum_year, lon, lat = get_hdf_list_data_and_sum(files_one_year, data_path, data_type)
-        results_return[year] = sum_year
-        # write_hdf5_and_compress()
+    if data_type in ['H0', 'H20', 'H25']:
+        files = get_date_start_end(date_start, date_end, 'GTI')  # 获取月数据分组文件
+        date_set = set()
+        for file_ in files:
+            filename = os.path.split(file_)[1]
+            print(filename)
+            date_str = str(filename).split('_')[1]
+            file_date = date(int(date_str[:4]), int(date_str[4:6]), 1)
+            # print(file_date)
+            file_date = file_date.strftime("%Y")
+            # print(int(file_date))
+            date_set.add(file_date)
+        print(date_set)
+        pro_bool = np.ndarray
+        for year in date_set:
+            data, lon, lat = data_dic, lons, lats = num_area('GTI', data_type, int(year) - 29, int(year),  pro_bool, pro_bool,
+                                        pro_bool, pro_bool,0, dateAnomaly=0)
+            for na, da in data.items():
+                results_return[int(year)] = da
+    else:
+        files = get_date_start_end(date_start, date_end, data_type)  # 获取月数据分组文件
+        year_str_list = []
+        if year_file_list or year_file_list != 0:
+            print('已生成的缓存文件：', year_str_list)
+            for year_file in year_file_list:
+                year_str = year_file[4:8]
+                year_str_list.append(year_str)
+        for year, files_one_year in get_file_year(files).items():
+            if str(year) in year_str_list:
+                file_hdf = os.path.join(DATA_1KM_YEAR, '{}/{}_{}.hdf'.format(data_type, data_type, year))
+                sum_year = get_hdf5_data(file_hdf, data_type, 1, 0, [0, np.inf], np.nan)
+                if not isinstance(lon.size, int):
+                    lon = get_hdf5_data(file_hdf, 'lon', 1, 0, [0, np.inf], np.nan)
+                    lat = get_hdf5_data(file_hdf, 'lat', 1, 0, [0, np.inf], np.nan)
+            else:
+                sum_year, lon, lat = get_hdf_list_data_and_sum(files_one_year, data_path, data_type)
+            results_return[year] = sum_year
+            # write_hdf5_and_compress()
     return results_return, lon, lat
 
 
@@ -1035,7 +1059,12 @@ def data_area_to_hdf(path, data, lons, lats, dataType, date_str, dee=1):  # R
 
 def num_point(dataType, taskChoice, dateStart, dateEnd, left_longitude, left_latitude, out_fi=1, dateAnomaly=0):
     # 选择数据类型
+    print('----')
+    print(dataType, taskChoice, dateStart, dateEnd, left_longitude, left_latitude, out_fi, dateAnomaly)
+    if taskChoice in {'H0', 'H20', 'H25'}:
+        date_start = str(int(args.dateEnd) - 29)
     d_t = get_datatype()
+    print(d_t)
     if dataType not in d_t:
         return '数据类型错误！'
     task = task_dict[str(taskChoice)]
@@ -1050,6 +1079,8 @@ def num_point(dataType, taskChoice, dateStart, dateEnd, left_longitude, left_lat
     row = row - 1
     col = col - 1
     print(row, col)
+    if isinstance(dateAnomaly, int):
+        dateAnomaly == str(dateAnomaly)
     if task in [1, 2, 3]:
         print('任务：', taskChoice)
         y_l = judge_file(dateStart, dateEnd, dataType, 'year')
@@ -1057,10 +1088,11 @@ def num_point(dataType, taskChoice, dateStart, dateEnd, left_longitude, left_lat
             data_year_2, lons, lats = get_year_data(dateStart, dateEnd, DATA_1KM_MONTH, dataType, y_l)
             print('data_year:', data_year_2)
             data_year = copy.deepcopy(data_year_2)
-            if y_l != 0:
-                for year_file in y_l:
-                    year_str = year_file[4:8]
-                    del data_year[int(year_str)]
+            if dataType not in ['H0', 'H20', 'H25']:
+                if y_l != 0:
+                    for year_file in y_l:
+                        year_str = year_file[4:8]
+                        del data_year[int(year_str)]
             data_area_to_hdf(DATA_1KM, data_year, lons, lats, dataType, 'YEAR/{}'.format(dataType), 0)
             # 获取年值
         else:
@@ -1188,6 +1220,39 @@ def num_point(dataType, taskChoice, dateStart, dateEnd, left_longitude, left_lat
         if out_fi == 1:
             data_point_to_txt(DATA_STAT, ano_qua, dataType)  # 输出至txt
         return ano_qua, lon, lat
+    elif task in [13, 14, 15]:
+        print('任务：', taskChoice)
+        if dataType != 'GTI':
+            print('数据类型应为GTI')
+            return '数据类型应为GTI'
+        y_l = judge_file(dateStart, dateEnd, dataType, 'year')
+        if y_l == 0 or len(y_l) < (int(dateEnd) - int(dateStart) + 1):
+            data_year_2, lons, lats = get_year_data(dateStart, dateEnd, DATA_1KM_MONTH, dataType, y_l)
+            print('data_year:', data_year_2)
+            data_year = copy.deepcopy(data_year_2)
+            if y_l != 0:
+                for year_file in y_l:
+                    year_str = year_file[4:8]
+                    del data_year[int(year_str)]
+            data_area_to_hdf(DATA_1KM, data_year, lons, lats, dataType, 'YEAR/{}'.format(dataType), 0)
+            # 获取年值
+        else:
+            path = DATA_1KM_YEAR
+            data_year_2, lons, lats = get_hdf_list_data(y_l, path, dataType)
+        years_sum = years_sum_point(data_year_2, row, col)
+        year_data_list = []
+        for key_, y_sum in years_sum.items():
+            year_data_list.append(y_sum)
+        year_ave = ave_a(year_data_list, len(years_sum))
+        if task == 13:
+            H_dict = {'H0_{}'.format(dateEnd): year_ave * 0.8, }
+        elif task == 14:
+            H_dict = {'H20_{}'.format(dateEnd): year_ave * 0.8 * 0.92, }
+        elif task == 15:
+            H_dict = {'H25_{}'.format(dateEnd): year_ave * 0.8 * 0.90, }
+        if out_fi == 1:
+            data_point_to_txt(DATA_STAT, H_dict, dataType)  # 输出至txt
+        return H_dict, lons[(row, col)], lats[(row, col)]
 
 
 def num_area(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatitude,
@@ -1208,6 +1273,8 @@ def num_area(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatitu
     else:
         row_min, col_min = 0, 0
         row_max, col_max = 4501, 7001
+    if isinstance(dateAnomaly, int):
+        dateAnomaly == str(dateAnomaly)
     print('行列：', row_min, row_max, col_min, col_max)
     if task in [1, 2, 3]:
         print('任务：', taskChoice)
@@ -1217,15 +1284,16 @@ def num_area(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatitu
             data_year, lons, lats = get_year_data(dateStart, dateEnd, DATA_1KM_MONTH, dataType, y_l)
             print('data_year:', data_year)
             data_year_2 = copy.deepcopy(data_year)
-            if y_l != 0:
-                for year_file in y_l:
-                    year_str = year_file[4:8]
-                    del data_year_2[int(year_str)]
+            if dataType not in ['H0', 'H20', 'H25']:
+                if y_l != 0:
+                    for year_file in y_l:
+                        year_str = year_file[4:8]
+                        del data_year_2[int(year_str)]
             data_area_to_hdf(DATA_1KM, data_year_2, lons, lats, dataType, 'YEAR/{}'.format(dataType), 0)
         else:
             path = DATA_1KM_YEAR
             data_year, lons, lats = get_hdf_list_data(y_l, path, dataType)
-        years_sum = years_sum_area(dateStart, dateEnd, data_year, row_min, row_max, col_min, col_max)
+        years_sum = years_sum_area(data_year, row_min, row_max, col_min, col_max)
         lon = lons[int(row_min):int(row_max) + 1, int(col_min):int(col_max) + 1]
         lat = lats[int(row_min):int(row_max) + 1, int(col_min):int(col_max) + 1]
         if task == 1:
@@ -1235,7 +1303,7 @@ def num_area(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatitu
         year_data_list = []
         for key_, y_sum in years_sum.items():
             year_data_list.append(y_sum)
-        year_area_ave = ave_a(year_data_list, int(dateEnd) - int(dateStart) + 1)
+        year_area_ave = ave_a(year_data_list, len(years_sum))
         if task == 2:
             year_area_ave_dict = {'yearMean': year_area_ave, }
             if out_fi == 1:
@@ -1257,7 +1325,7 @@ def num_area(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatitu
             else:
                 path = DATA_1KM_YEAR
                 data_year, lons, lats = get_hdf_list_data(y_l, path, dataType)
-            years_sum = years_sum_area(dateAnomaly, dateAnomaly, data_year, row_min, row_max, col_min, col_max)
+            years_sum = years_sum_area(data_year, row_min, row_max, col_min, col_max)
         year_jp_all_dict = {}
         for year, y_sum in years_sum.items():
             year_jp_all = juping_a(y_sum, year_area_ave)
@@ -1362,6 +1430,41 @@ def num_area(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatitu
         if out_fi == 1:
             data_area_to_hdf(DATA_STAT, ano_qua, lon, lat, dataType, date_str)
         return ano_qua, lon, lat
+    elif task in [13, 14, 15]:
+        print('任务：', taskChoice)
+        if dataType != 'GTI':
+            print('数据类型应为GTI')
+            return '数据类型应为GTI'
+        y_l = judge_file(dateStart, dateEnd, dataType, 'year')
+        if y_l == 0 or len(y_l) < (int(dateEnd) - int(dateStart) + 1):
+            data_year, lons, lats = get_year_data(dateStart, dateEnd, DATA_1KM_MONTH, dataType, y_l)
+            print('data_year:', data_year)
+            data_year_2 = copy.deepcopy(data_year)
+            if y_l != 0:
+                for year_file in y_l:
+                    year_str = year_file[4:8]
+                    del data_year_2[int(year_str)]
+            data_area_to_hdf(DATA_1KM, data_year_2, lons, lats, dataType, 'YEAR/{}'.format(dataType), 0)
+        else:
+            path = DATA_1KM_YEAR
+            data_year, lons, lats = get_hdf_list_data(y_l, path, dataType)
+        years_sum = years_sum_area(data_year, row_min, row_max, col_min, col_max)
+        lon = lons[int(row_min):int(row_max) + 1, int(col_min):int(col_max) + 1]
+        lat = lats[int(row_min):int(row_max) + 1, int(col_min):int(col_max) + 1]
+        year_data_list = []
+        for key_, y_sum in years_sum.items():
+            year_data_list.append(y_sum)
+        year_ave = ave_a(year_data_list, len(years_sum))
+        if task == 13:
+            H_dict = {'H0_{}'.format(dateEnd): year_ave * 0.8, }
+        elif task == 14:
+            H_dict = {'H20_{}'.format(dateEnd): year_ave * 0.8 * 0.92, }
+        elif task == 15:
+            H_dict = {'H25_{}'.format(dateEnd): year_ave * 0.8 * 0.90, }
+        print('H_dict', H_dict)
+        if out_fi == 1:
+            data_area_to_hdf(DATA_STAT, H_dict, lon, lat, dataType, date_str)
+        return H_dict, lon, lat
 
 
 def num_province(dataType, province, taskChoice, dateStart, dateEnd, out_fi=0, avg=False, out_fig=1, dateAnomaly=0):
@@ -1420,7 +1523,7 @@ filterwarnings("ignore")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='GFSSI Schedule')
-    parser.add_argument('--dataType', '-t', help='数据类型(GHI/DBI/DHI/GTI/...)', required=True)
+    parser.add_argument('--dataType', '-t', help='数据类型(GHI/DBI/DHI/GTI/H0/H20/H25...)', required=True)
     parser.add_argument('--modeType', '-m', help='单点or范围or省or全国(point或area或province或all)', required=True)
     parser.add_argument('--province', '-z', help='省级行政区域名称（汉字）', required=False)
     parser.add_argument('--avg', '-g', help='区域平均值（True）', required=False)
@@ -1432,67 +1535,82 @@ if __name__ == '__main__':
                              'seasonSum, seasonMean, seasonAnomaly,'
                              'quarterSum, quarterMean, quarterAnomaly,',
                         required=False)
-    parser.add_argument('--dateStart', '-s', help='开始年份，YYYY(2019)', required=True)
+    parser.add_argument('--dateStart', '-s', help='开始年份，YYYY(2019)', required=False)
     parser.add_argument('--dateEnd', '-e', help='结束年份，YYYY(2019)', required=True)
-    parser.add_argument('--dateAnomaly', '-o', help='指定计算距平年份，YYYY(2019)', required=False)
+    parser.add_argument('--dateChoice', '-o', help='指定计算距平年份，YYYY(2019)', required=False)
     parser.add_argument('--leftLongitude', '-l', help='经度或左上角经度，47.302235', required=False)
     parser.add_argument('--leftLatitude', '-a', help='纬度或左上角纬度，85.880519', required=False)
     parser.add_argument('--rightLongitude', '-r', help='右下角经度，47.302235', required=False)
     parser.add_argument('--rightLatitude', '-i', help='右下角纬度，85.880519', required=False)
     args = parser.parse_args()
-    if args.dateAnomaly:
-        date_anomaly = args.dateAnomaly
+    if args.dateChoice:
+        date_choice = args.dateChoice
     else:
-        date_anomaly = 0
+        date_choice = 0
+    date_start = args.dateStart
     if args.modeType == 'point':
-        print(args.dataType, args.taskChoice, args.dateStart, args.dateEnd, args.leftLongitude, args.leftLatitude,
-              date_anomaly)
-        n_p = num_point(args.dataType, args.taskChoice, args.dateStart, args.dateEnd, args.leftLongitude,
-                        args.leftLatitude, dateAnomaly=date_anomaly)
+        print(args.dataType, args.taskChoice, date_start, args.dateEnd, args.leftLongitude, args.leftLatitude,
+              date_choice)
+        n_p = num_point(args.dataType, args.taskChoice, date_start, args.dateEnd, args.leftLongitude,
+                        args.leftLatitude, dateAnomaly=date_choice)
         # print(n_p)
     elif args.modeType == 'area':
-        print(args.dataType, args.taskChoice, args.dateStart, args.dateEnd, args.leftLongitude,
-              args.leftLatitude, args.rightLongitude, args.rightLatitude, date_anomaly)
-        n_a = num_area(args.dataType, args.taskChoice, args.dateStart, args.dateEnd, args.leftLongitude,
-                       args.leftLatitude, args.rightLongitude, args.rightLatitude, dateAnomaly=date_anomaly)
+        print(args.dataType, args.taskChoice, date_start, args.dateEnd, args.leftLongitude,
+              args.leftLatitude, args.rightLongitude, args.rightLatitude, date_choice)
+        n_a = num_area(args.dataType, args.taskChoice, date_start, args.dateEnd, args.leftLongitude,
+                       args.leftLatitude, args.rightLongitude, args.rightLatitude, dateAnomaly=date_choice)
         # print(n_a)
     elif args.modeType == 'province':
-        print(args.dataType, args.province, args.taskChoice, args.dateStart, args.dateEnd, date_anomaly)
+        print(args.dataType, args.province, args.taskChoice, date_start, args.dateEnd, date_choice)
         num_province(args.dataType, args.province, args.taskChoice, args.dateStart, args.dateEnd,
-                     dateAnomaly=date_anomaly)
+                     dateAnomaly=date_choice)
     elif args.modeType == 'all':
-        print(args.dataType, 'all', args.taskChoice, args.dateStart, args.dateEnd, args.avg, date_anomaly)
+        print(args.dataType, 'all', args.taskChoice, date_start, args.dateEnd, args.avg, date_choice)
         if args.avg:
-            num_province(args.dataType, 'all', args.taskChoice, args.dateStart, args.dateEnd, avg=args.avg,
-                         dateAnomaly=date_anomaly)
+            num_province(args.dataType, 'all', args.taskChoice, date_start, args.dateEnd, avg=args.avg,
+                         dateAnomaly=date_choice)
         else:
-            num_province(args.dataType, 'all', args.taskChoice, args.dateStart, args.dateEnd,
-                         dateAnomaly=date_anomaly)
+            num_province(args.dataType, 'all', args.taskChoice, date_start, args.dateEnd,
+                         dateAnomaly=date_choice)
     '''
     python3 a04_data_statistics.py -t GHI -m point  -c yearSum -s 2019 -e 2019 -l 113 -a 43
+    python3 a04_data_statistics.py -t H0 -m point  -c yearSum -s 2019 -e 2019 -l 113 -a 43
+    python3 a04_data_statistics.py -t H20 -m point  -c yearSum -s 2018 -e 2019 -l 113 -a 43
+    python3 a04_data_statistics.py -t H0 -m point  -c yearSum -s 2019 -e 2019 -l 113 -a 43
     python3 a04_data_statistics.py -t GHI -m point  -c yearMean -s 2019 -e 2019 -l 113 -a 43
     python3 a04_data_statistics.py -t GHI -m point  -c yearAnomaly -s 2017 -e 2019 -l 113 -a 43
+    python3 a04_data_statistics.py -t H0 -m point  -c yearAnomaly -s 2017 -e 2019 -l 113 -a 43
     python3 a04_data_statistics.py -t GHI -m point  -c monthSum -s 2018 -e 2019 -l 113 -a 43
     python3 a04_data_statistics.py -t GHI -m point  -c monthMean -s 2018 -e 2019 -l 113 -a 43
     python3 a04_data_statistics.py -t GHI -m point  -c monthAnomaly -s 2018 -e 2019 -l 113 -a 43
+    python3 a04_data_statistics.py -t GHI -m point  -c monthAnomaly -s 2018 -e 2019 -o 2020 -l 113 -a 43
     python3 a04_data_statistics.py -t GHI -m point  -c seasonSum -s 2019 -e 2019 -l 113 -a 43
     python3 a04_data_statistics.py -t GHI -m point  -c seasonMean -s 2019 -e 2019 -l 113 -a 43
     python3 a04_data_statistics.py -t GHI -m point  -c seasonAnomaly -s 2017 -e 2019 -l 113 -a 43
     python3 a04_data_statistics.py -t GHI -m point  -c quarterSum -s 2019 -e 2019 -l 113 -a 43
     python3 a04_data_statistics.py -t GHI -m point  -c quarterMean -s 2019 -e 2019 -l 113 -a 43
     python3 a04_data_statistics.py -t GHI -m point  -c quarterAnomaly -s 2017 -e 2019 -l 113 -a 43
+    python3 a04_data_statistics.py -t GTI -m point  -c H0    -e 2019 -l 113 -a 43
+    python3 a04_data_statistics.py -t GTI -m point  -c H20   -e 2019 -l 113 -a 43
+    python3 a04_data_statistics.py -t GTI -m point  -c H25   -e 2019 -l 113 -a 43
     python3 a04_data_statistics.py -t GHI -m area  -c yearSum -s 2019 -e 2019 -l 113 -a 43 -r 120 -i 36
+    python3 a04_data_statistics.py -t H0  -m area  -c yearSum -s 2019 -e 2019 -l 113 -a 43 -r 120 -i 36
+    python3 a04_data_statistics.py -t H25 -m area  -c yearSum -s 2017 -e 2019 -l 113 -a 43 -r 120 -i 36
     python3 a04_data_statistics.py -t GHI -m area  -c yearMean -s 2019 -e 2019 -l 113 -a 43 -r 120 -i 36
     python3 a04_data_statistics.py -t GHI -m area  -c yearAnomaly -s 2017 -e 2019 -l 113 -a 43 -r 120 -i 36
     python3 a04_data_statistics.py -t GHI -m area  -c monthSum  -s 2019 -e 2019 -l 113 -a 43 -r 120 -i 36
     python3 a04_data_statistics.py -t GHI -m area  -c monthMean -s 2019 -e 2019 -l 113 -a 43 -r 120 -i 36
     python3 a04_data_statistics.py -t GHI -m area  -c monthAnomaly -s 2017 -e 2019 -l 113 -a 43 -r 120 -i 36
+    python3 a04_data_statistics.py -t GHI -m area  -c monthAnomaly -s 2017 -e 2019 -o 2020 -l 113 -a 43 -r 120 -i 36
     python3 a04_data_statistics.py -t GHI -m area  -c seasonSum -s 2019 -e 2019 -l 113 -a 43 -r 120 -i 36
     python3 a04_data_statistics.py -t GHI -m area  -c seasonMean -s 2019 -e 2019 -l 113 -a 43 -r 120 -i 36
     python3 a04_data_statistics.py -t GHI -m area  -c seasonAnomaly -s 2014 -e 2015 -l 113 -a 43 -r 120 -i 36
     python3 a04_data_statistics.py -t GHI -m area  -c quarterSum -s 2019 -e 2019 -l 113 -a 43 -r 120 -i 36
     python3 a04_data_statistics.py -t GHI -m area  -c quarterMean -s 2019 -e 2019 -l 113 -a 43 -r 120 -i 36
     python3 a04_data_statistics.py -t GHI -m area  -c quarterAnomaly -s 2016 -e 2019 -l 113 -a 43 -r 120 -i 36
+    python3 a04_data_statistics.py -t GTI -m area  -c H0    -e 2019  -l 113 -a 43 -r 120 -i 36
+    python3 a04_data_statistics.py -t GTI -m area  -c H20   -e 2019  -l 113 -a 43 -r 120 -i 36
+    python3 a04_data_statistics.py -t GTI -m area  -c H25   -e 2019  -l 113 -a 43 -r 120 -i 36
     python3 a04_data_statistics.py -t GHI -m province -z 山东  -c yearSum -s 2019 -e 2019
     python3 a04_data_statistics.py -t GHI -m province -z 山东  -c yearMean -s 2019 -e 2019
     python3 a04_data_statistics.py -t GHI -m province -z 山东  -c yearAnomaly -s 2019 -e 2019
