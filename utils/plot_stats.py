@@ -4,6 +4,7 @@
 # @Author  : NingAnMe <ninganme@qq.com>
 import os
 from datetime import datetime
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import numpy as np
@@ -243,7 +244,10 @@ def plot_bar(
         annotate=None,
         ymd_start=None,
         ymd_end=None,
-        ymd=None, ):
+        ymd=None,
+        data_type=None,
+        mean_line=True,
+):
 
     # style_path = STYLE_PATH
     # style_file = os.path.join(style_path, 'plot_histogram.mplstyle')
@@ -259,21 +263,19 @@ def plot_bar(
     sns.set_style("whitegrid")
 
     ax1.bar(x, y)
-    # sns.barplot(x, y, ax=ax1)
-    #
-    # # 画平均线
-    mean = np.mean(y[:-1])
-    mean = np.full_like(x, mean.item(), dtype=np.float)
-    mean[-1] = np.nan
-    ax1.plot(x, mean, color='red')
-    # ax2 = ax1.twinx()
-    # mean = np.mean(y[:-1])
-    # mean = np.full_like(x, mean.item(), dtype=np.float)
-    # mean[-1] = np.nan
-    # ax2 = sns.pointplot(x, mean, ax=ax2)
-    # ax2.yaxis = ax1.yaxis
+    ax1.tick_params(axis='x', rotation=270)
+    # 画平均线
+    if mean_line:
+        mean = np.mean(y[:-1])
+        mean = np.full_like(x, mean.item(), dtype=np.float)
+        mean[-1] = np.nan
+        ax1.plot(x, mean, color='red')
 
     plot_ax = PlotAx()
+    # 调整汉字的字体和显示方式
+    if data_type == 'province':
+        plot_ax.tick_font = get_ds_font('simhei.ttf')
+        mpl.rcParams['axes.unicode_minus'] = False
 
     format_kwargs = {
         'x_major_count': 11,

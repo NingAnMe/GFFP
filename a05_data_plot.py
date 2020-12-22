@@ -32,7 +32,7 @@ from utils.hdf5 import get_hdf5_data
 from utils.config import LATITUDE_RANGE_China, LONGITUDE_RANGE_China, POOR_XLSX, PRO_MASK_HDF, PROVINCE_MASK
 from utils.model import Village
 
-from a04_data_statistics import num_area, num_point, num_province
+from a04_data_statistics import num_area, num_point
 
 
 # def get_village_data(data, lons, lats, lon_village, lat_village):
@@ -175,7 +175,7 @@ def plot_data_map(data_type=None,
                                 taskChoice=task_choice,
                                 dateStart=date_start,
                                 dateEnd=date_end,
-                                dateChoice=date_choice,
+                                dateAnomaly=date_choice,
                                 left_longitude=lons,
                                 left_latitude=lats,
                                 out_fi=0)
@@ -185,7 +185,7 @@ def plot_data_map(data_type=None,
                           taskChoice=task_choice,
                           dateStart=date_start,
                           dateEnd=date_end,
-                          dateChoice=date_choice,
+                          dateAnomaly=date_choice,
                           leftLongitude=left_longitude,
                           leftLatitude=left_latitude,
                           rightLongitude=right_longitude,
@@ -274,7 +274,7 @@ def plot_data_column(data_type=None,
 
         datas, _, _ = num_area(dataType=data_type, taskChoice=task_choice,
                                dateStart=date_start, dateEnd=date_end,
-                               dateChoice=date_choice,
+                               dateAnomaly=date_choice,
                                leftLongitude=float(LONGITUDE_RANGE_China[0]),
                                leftLatitude=float(LATITUDE_RANGE_China[1]),
                                rightLongitude=float(LONGITUDE_RANGE_China[1]),
@@ -304,12 +304,64 @@ def plot_data_column(data_type=None,
         else:  # 按时间分组
             x_y = {'time': {'x': list(),
                             'y': list()}}
-            for time, data in datas.items():
+            times = datas.keys()
+            times.sorted()
+            for time in times:
                 x_y['time']['x'].append(time)
-                x_y['time']['y'].append(np.nanmean(data[pro_mask_data != 0]))
+                x_y['time']['y'].append(np.nanmean(datas[time][pro_mask_data != 0]))
 
-    elif mode_type == 'village' and group_type == 'province':  # 绘制每个省贫困村的平均值的柱状图
-        pass
+    elif mode_type == 'village' and area_value == 'province':  # 绘制每个省贫困村的平均值的柱状图
+        village_info = Village.get_village_info_by_file(POOR_XLSX)
+        lons = village_info['lon'].to_numpy()
+        lats = village_info['lat'].to_numpy()
+        datas, _, _ = num_point(dataType=data_type,
+                                taskChoice=task_choice,
+                                dateStart=date_start,
+                                dateEnd=date_end,
+                                dateAnomaly=date_choice,
+                                left_longitude=lons,
+                                left_latitude=lats,
+                                out_fi=0)
+        print(datas)
+        x_y = dict()
+        if date_choice:
+            date_choice = int(date_choice)
+            datas = {date_choice: datas[date_choice]}
+        for time, data in datas.items():
+            x_y[time] = dict()
+            village_info[data_type] = datas[int(date_choice)]
+            values = village_info.groupby('sheng')[dataType].agg('mean')
+            values = values.sort_values()
+            x = pd.Series(values.index)
+            x[x == '广西壮族自治区'] = '广西'
+            x[x == '宁夏回族自治区'] = '宁夏'
+            x[x == '西藏自治区'] = '西藏'
+            x[x == '内蒙古自治区'] = '内蒙古'
+            x[x == '新疆维吾尔自治区'] = '新疆'
+            x[x == '黑龙江省'] = '黑龙江'
+            x_y[time]['x'] = x.to_numpy()
+            x_y[time]['y'] = values.values
+    elif mode_type == 'point':
+        datas, _, _ = num_point(dataType=data_type,
+                                taskChoice=task_choice,
+                                dateStart=date_start,
+                                dateEnd=date_end,
+                                dateAnomaly=date_choice,
+                                left_longitude=left_longitude,
+                                left_latitude=left_latitude,
+                                out_fi=0)
+        print(datas)
+        x_y = dict()
+        x_y['point'] = dict()
+        x = list()
+        y = list()
+        for k, v in datas.items():
+            x.append(k)
+            y.append(v)
+        x, y = zip(*sorted(zip(x, y), reverse=False))
+        x_y['point']['x'] = np.array(x)
+        x_y['point']['y'] = np.array(y)
+
     else:
         raise ValueError(mode_type)
 
@@ -439,10 +491,12 @@ if __name__ == '__main__':
             AREA_TYPE = {'province', 'time'}
             assert areaValue is not None, '输入的 area 需要为 {}'.format(AREA_TYPE)
             assert areaValue in AREA_TYPE, '输入的 area 需要为 {}'.format(AREA_TYPE)
+        elif modeType == 'point':
+            areaValue = 'time'
         else:
             raise ValueError('modeType 参数错误 :{}'.format(MODE_TYPE))
 
-        if areaValue == 'all':
+        if modeType == 'all':
             leftLongitude = LONGITUDE_RANGE_China[0]
             leftLatitude = LATITUDE_RANGE_China[1]
             rightLongitude = LONGITUDE_RANGE_China[1]
@@ -455,6 +509,11 @@ if __name__ == '__main__':
             assert leftLatitude <= LATITUDE_RANGE_China[1]
             assert rightLongitude <= LONGITUDE_RANGE_China[1]
             assert rightLatitude >= LATITUDE_RANGE_China[0]
+        elif modeType == 'point':
+            leftLongitude = args.leftLongitude
+            leftLatitude = args.leftLatitude
+            rightLongitude = None
+            rightLatitude = None
         else:
             leftLongitude = None
             leftLatitude = None
@@ -517,4 +576,10 @@ if __name__ == '__main__':
     
     图16
     python3 a05_data_plot.py -t GHI -y column -m village -z province -c yearAnomaly -s 2010 -e 2019 -o 2020
+    
+    图18、19、20、21、22
+    python3 a05_data_plot.py -t GHI -y column -m point -z time -c yearSum -s 2010 -e 2020 -l 115.0 -a 31.2
+    
+    图23、24、25、26、27
+    python3 a05_data_plot.py -t GHI -y column -m point -z time -c monthAnomaly -s 2010 -e 2019 -o 2020 -l 115.0 -a 31.2
     """
