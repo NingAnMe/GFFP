@@ -48,5 +48,5 @@ def print_config():
 
 
 def get_datatype():
-    datatype = ['GHI', 'DBI', 'DHI', 'GTI']
+    datatype = ['GHI', 'DBI', 'DHI', 'GTI', 'H0', 'H20', 'H25']
     return datatype
