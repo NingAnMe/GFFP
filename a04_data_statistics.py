@@ -621,11 +621,11 @@ def num_point(dataType, taskChoice, dateStart, dateEnd, left_longitude, left_lat
         left_latitude=left_latitude,
         out_fig=out_fi
     )
-    return out_put[0],out_put[1],out_put[2]
+    return out_put[0], out_put[1], out_put[2]
 
 
 def num_area(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatitude,
-             rightLongitude, rightLatitude, out_fi=1, dateChoice=0):
+             rightLongitude, rightLatitude, out_fi=1, dateChoice=None):
     out_put = data_statistics(
         data_type=dataType,
         mode_type='area',
@@ -639,10 +639,10 @@ def num_area(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatitu
         right_latitude=rightLatitude,
         out_fig=out_fi
     )
-    return out_put[0],out_put[1],out_put[2]
+    return out_put[0], out_put[1], out_put[2]
 
 
-def num_province(dataType, province, taskChoice, dateStart, dateEnd, avg=False, out_fi=1, dateChoice=0):
+def num_province(dataType, province, taskChoice, dateStart, dateEnd, avg=False, out_fi=1, dateChoice=None):
     if province == 'all':
         province = None
         modeType = 'cn'
@@ -659,7 +659,7 @@ def num_province(dataType, province, taskChoice, dateStart, dateEnd, avg=False, 
         out_fig=out_fi,
         avg=avg
     )
-    return out_put[0],out_put[1],out_put[2]
+    return out_put[0], out_put[1], out_put[2]
 
 
 filterwarnings("ignore")
