@@ -179,7 +179,6 @@ def plot_histogram(
         ymd_start=None,
         ymd_end=None,
         ymd=None, ):
-    import seaborn as sns
     # style_path = STYLE_PATH
     # style_file = os.path.join(style_path, 'plot_histogram.mplstyle')
     # plt.style.use(style_file)
@@ -252,8 +251,8 @@ def plot_bar(
     # style_path = STYLE_PATH
     # style_file = os.path.join(style_path, 'plot_histogram.mplstyle')
     # plt.style.use(style_file)
-    figsize = (6, 4)
-    dpi = 100
+    figsize = (9, 8)
+    dpi = 200
     fig = plt.figure(figsize=figsize, dpi=dpi)
     ax1 = plt.subplot2grid((1, 1), (0, 0))
     x = np.array(x)
@@ -262,20 +261,21 @@ def plot_bar(
     # 画柱状图
     sns.set_style("whitegrid")
 
-    ax1.bar(x, y)
+    ax1.bar(x, y, label='柱状图值')
     ax1.tick_params(axis='x', rotation=270)
     # 画平均线
     if mean_line:
         mean = np.mean(y[:-1])
         mean = np.full_like(x, mean.item(), dtype=np.float)
         mean[-1] = np.nan
-        ax1.plot(x, mean, color='red')
+        ax1.plot(x, mean, color='red', label='平均值')
 
     plot_ax = PlotAx()
     # 调整汉字的字体和显示方式
     if data_type == 'province':
         plot_ax.tick_font = get_ds_font('simhei.ttf')
         mpl.rcParams['axes.unicode_minus'] = False
+    plot_ax.label_font = get_ds_font('simhei.ttf')
 
     format_kwargs = {
         'x_major_count': 11,
@@ -297,6 +297,9 @@ def plot_bar(
 
     plot_ax.format_ax(ax1, **format_kwargs)
 
+    if mean_line:
+        ax1.legend(prop=get_ds_font('simhei.ttf'))
+
     # --------------------
     plt.tight_layout()
     fig.suptitle(title, y=0.94, ha='center', fontproperties=TITLE_FONT)
@@ -310,7 +313,7 @@ def plot_bar(
     fig.text(0.8, 0.02, ORG_NAME, fontproperties=BOTTOM_FONT)
     # ---------------
     make_sure_path_exists(os.path.dirname(out_file))
-    fig.savefig(out_file, dpi=100)
+    fig.savefig(out_file, dpi=dpi)
     fig.clear()
     plt.close()
     print('>>> {}'.format(out_file))

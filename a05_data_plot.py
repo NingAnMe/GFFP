@@ -15,17 +15,16 @@
 
 import argparse
 import os
-from datetime import datetime, date
+from datetime import datetime
 
 import matplotlib.pyplot as plt
-import seaborn as sns
 import numpy as np
 import pandas as pd
 
 from pylab import subplots_adjust
 from DV.dv_map import dv_map
 
-from user_config import DATA_1KM, DATA_STAT, DATA_PICTURE
+from user_config import DATA_PICTURE
 
 from utils import plot_stats as plts
 from utils.hdf5 import get_hdf5_data
@@ -39,7 +38,7 @@ from a04_data_statistics import num_area, num_point
 #     index =
 
 
-def plot_map(data, lons, lats, title='', vmin=-np.inf, vmax=np.inf, areas=None, box=None, ticks=None, file_out=None,
+def plot_map(data, lons, lats, title=None, vmin=-np.inf, vmax=np.inf, areas=None, box=None, ticks=None, file_out=None,
              ptype='pcolormesh', mksize=5, nanhai=False):
     if file_out is None:
         print('没有指定输出文件：file_out is None')
@@ -61,7 +60,7 @@ def plot_map(data, lons, lats, title='', vmin=-np.inf, vmax=np.inf, areas=None, 
 
     # 开始画图-----------------------
 
-    fig = plt.figure(figsize=(9., 8.))  # 图像大小
+    fig = plt.figure(figsize=(9, 8))  # 图像大小
 
     p = dv_map(fig=fig)
 
@@ -136,7 +135,8 @@ def plot_map(data, lons, lats, title='', vmin=-np.inf, vmax=np.inf, areas=None, 
     #                   fontproperties=p.font_mid, fontsize=fontsize)
 
     # 标题 ---------------------------
-    p.w_title = p.suptitle(title, fontsize=14, y=0.97)
+    if title is not None:
+        p.w_title = p.suptitle(title, fontsize=14, y=0.97)
 
     # save
     p.savefig(out_file, dpi=300)
@@ -175,7 +175,7 @@ def plot_data_map(data_type=None,
                                 taskChoice=task_choice,
                                 dateStart=date_start,
                                 dateEnd=date_end,
-                                dateAnomaly=date_choice,
+                                dateChoice=date_choice,
                                 left_longitude=lons,
                                 left_latitude=lats,
                                 out_fi=0)
@@ -185,7 +185,7 @@ def plot_data_map(data_type=None,
                           taskChoice=task_choice,
                           dateStart=date_start,
                           dateEnd=date_end,
-                          dateAnomaly=date_choice,
+                          dateChoice=date_choice,
                           leftLongitude=left_longitude,
                           leftLatitude=left_latitude,
                           rightLongitude=right_longitude,
@@ -225,7 +225,8 @@ def plot_data_map(data_type=None,
         print('lons', np.nanmin(lons), np.nanmean(lons), np.nanmax(lons), lons.shape)
         print('lats', np.nanmin(lats), np.nanmean(lats), np.nanmax(lats), lats.shape)
 
-        title = '{}  {}'.format(data_type, time)
+        # title = '{}  {}'.format(data_type, time)
+        title = None
         vmin = None
         vmax = None
         ticks = None
@@ -244,6 +245,24 @@ def plot_data_map(data_type=None,
                  areas=aeres, box=box, ticks=ticks, file_out=file_out,
                  mksize=mksize, nanhai=nanhai)
     return dir_out
+
+
+def get_y_label(data_type, an):
+    y_labels_sum = {
+        "GHI": "水平面总辐照量 $KWh/m^2$",
+        "GTI": "最佳斜面总辐照量 $KWh/m^2$",
+    }
+    y_labels_an = {
+        "GHI": "水平面总辐照量距平百分率 %",
+        "GTI": "最佳斜面总辐照距平百分率 %",
+    }
+    if an:
+        y_labels = y_labels_an
+    else:
+        y_labels = y_labels_sum
+    if data_type in y_labels:
+        return y_labels[data_type]
+    return None
 
 
 def plot_data_column(data_type=None,
@@ -274,7 +293,7 @@ def plot_data_column(data_type=None,
 
         datas, _, _ = num_area(dataType=data_type, taskChoice=task_choice,
                                dateStart=date_start, dateEnd=date_end,
-                               dateAnomaly=date_choice,
+                               dateChoice=date_choice,
                                leftLongitude=float(LONGITUDE_RANGE_China[0]),
                                leftLatitude=float(LATITUDE_RANGE_China[1]),
                                rightLongitude=float(LONGITUDE_RANGE_China[1]),
@@ -285,7 +304,6 @@ def plot_data_column(data_type=None,
         if area_value == 'province':  # 按省份分组
             x_y = dict()
             if date_choice:
-                date_choice = int(date_choice)
                 datas = {date_choice: datas[date_choice]}
             for time, data in datas.items():
                 x_y[time] = dict()
@@ -305,7 +323,7 @@ def plot_data_column(data_type=None,
             x_y = {'time': {'x': list(),
                             'y': list()}}
             times = datas.keys()
-            times.sorted()
+            times = sorted(times)
             for time in times:
                 x_y['time']['x'].append(time)
                 x_y['time']['y'].append(np.nanmean(datas[time][pro_mask_data != 0]))
@@ -318,18 +336,17 @@ def plot_data_column(data_type=None,
                                 taskChoice=task_choice,
                                 dateStart=date_start,
                                 dateEnd=date_end,
-                                dateAnomaly=date_choice,
+                                dateChoice=date_choice,
                                 left_longitude=lons,
                                 left_latitude=lats,
                                 out_fi=0)
         print(datas)
         x_y = dict()
         if date_choice:
-            date_choice = int(date_choice)
             datas = {date_choice: datas[date_choice]}
         for time, data in datas.items():
             x_y[time] = dict()
-            village_info[data_type] = datas[int(date_choice)]
+            village_info[data_type] = datas[date_choice]
             values = village_info.groupby('sheng')[dataType].agg('mean')
             values = values.sort_values()
             x = pd.Series(values.index)
@@ -346,7 +363,7 @@ def plot_data_column(data_type=None,
                                 taskChoice=task_choice,
                                 dateStart=date_start,
                                 dateEnd=date_end,
-                                dateAnomaly=date_choice,
+                                dateChoice=date_choice,
                                 left_longitude=left_longitude,
                                 left_latitude=left_latitude,
                                 out_fi=0)
@@ -377,9 +394,14 @@ def plot_data_column(data_type=None,
         y = x_y_['y']
         filename_out = '{}_{}_{}_{}_{}.png'.format(task_choice, data_type, date_start, date_end, group)
         file_out = os.path.join(dir_out, filename_out)
-        title = '{}'.format(data_type)
+        # title = '{}'.format(data_type)
+        title = None
         x_label = ' '
-        y_label = '{}'.format(data_type)
+        y_label_t = get_y_label(data_type, mean_line)
+        if y_label_t:
+            y_label = y_label_t
+        else:
+            y_label = '{}'.format(data_type)
         plts.plot_bar(x, y, out_file=file_out, title=title, x_label=x_label,
                       y_label=y_label, data_type=area_value, mean_line=mean_line)
 
@@ -560,7 +582,7 @@ if __name__ == '__main__':
     python3 a05_data_plot.py -t GTI -y map -m all -c yearSum -s 2020 -e 2020
     
     图11
-    python3 a05_data_plot.py -t GTI -y map -m all -c H0 -s 2020 -e 2020
+    python3 a05_data_plot.py -t H0 -y map -m all -c yearSum -s 2020 -e 2020
     
     图12
     python3 a05_data_plot.py -t GTI -y map -m all -c yearAnomaly -s 2010 -e 2019 -o 2020
