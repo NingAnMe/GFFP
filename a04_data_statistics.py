@@ -26,11 +26,11 @@ task_name_list = ['year', 'mon', 'sea', 'qua']
 
 def judge_file(date_start, date_end, data_type, task_name):
     """
-    :param date_start:
-    :param date_end:
-    :param data_type:
-    :param task_name: 'sea' 'qua' 'year' 'mon'
-    :return:file_list
+    :param date_start:开始年份
+    :param date_end:结束年份
+    :param data_type:数据类型
+    :param task_name: 'sea' 'qua' 'year' 'mon' 任务所需数据数据名称
+    :return:file_list 返回文件名列表
     """
     print('judge_file')
     print(date_start, date_end, data_type, task_name)
@@ -53,12 +53,12 @@ def judge_file(date_start, date_end, data_type, task_name):
     file_list = []
     for file_ in os.listdir(data_path):
         filename = os.path.split(file_)[1]
-        print(filename)
         date_str = str(filename).split('_')[1]
         file_date = date(int(date_str[:4]), 1, 1)
         file_date = file_date.strftime("%Y")
         if int(date_start) <= int(file_date) <= int(date_end):
             file_list.append(file_)
+    print(file_list)
     if not file_list:
         print('Judge No File')
         return 0
@@ -69,7 +69,6 @@ def get_month_data_by_start_end(date_start, date_end, data_type):
     """
     通过起止时间和文件类型获取所需月数据文件列表
     """
-    print('---------------------------------------------------------------------------')
     print(date_start, date_end, data_type)
     data_path = os.path.join(DATA_1KM_MONTH, data_type)
     # data_path = 'D:\project\py\gz\ky\gffp\\aid\data\{}'.format(data_type)
@@ -88,18 +87,23 @@ def get_month_data_by_start_end(date_start, date_end, data_type):
     if not file_list:
         raise ValueError('No file in {} {}'.format(date_start, date_end))
     # print(file_list)
-    print('----------------------------------------------------------------------------')
     return file_list
 
 
 def get_group_files(files, group_key, date_start, date_end):
-    # {key1:{key2:[files],}}
-    # {year:{m:[files],}}{m:{m:[files],}}{year:{sea:[files],}}{year:{qua:[files],}}
+    """
+    文件分组
+    :param files: list 文件列表
+    :param group_key: str分组关键字
+    :param date_start: str 开始时间
+    :param date_end:  str
+    :return: {key1:{key2:[files],}}
+            {year:{m:[files],}}{m:{m:[files],}}{year:{sea:[files],}}{year:{qua:[files],}}
+    """
     data_dic = {}
     for fi in files:
-        print(fi)
+        # print(fi)
         filename = os.path.split(fi)[1]
-        print(filename)
         date_str = str(filename).split('_')[1]
         file_date = date(int(date_str[:4]), int(date_str[4:6]), 1)
         y = int(file_date.year)
@@ -214,7 +218,7 @@ def get_group_files(files, group_key, date_start, date_end):
     return data_dic
 
 
-def data_point_to_txt(path, data, dataType, date_str):  # R
+def data_point_to_txt(path, data, dataType, date_str):
     """
     :param dataType:
     :param path:
@@ -237,7 +241,7 @@ def data_point_to_txt(path, data, dataType, date_str):  # R
         f.write(data_str)
 
 
-def data_area_to_hdf(path, data, lons, lats, dataType, date_str, dee=1):  # R
+def data_area_to_hdf(path, data, lons, lats, dataType, date_str, dee=1):
     """
     :param dee:
     :param date_str:
@@ -258,11 +262,10 @@ def data_area_to_hdf(path, data, lons, lats, dataType, date_str, dee=1):  # R
         print('finish{}'.format(path_out))
 
 
-def get_data(date_start, date_end, data_path, data_type, task_key=None, file_list=None):  # R
+def get_data(date_start, date_end, data_path, data_type, task_key=None, file_list=None):
     """
     :return: { year:data} lon lat
     """
-    print('-------------------------------------')
     print('get_data')
     print(date_start, date_end, data_path, data_type, task_key, file_list)
     lon = np.ndarray
@@ -274,18 +277,15 @@ def get_data(date_start, date_end, data_path, data_type, task_key=None, file_lis
         date_set = set()
         for file_ in files:
             filename = os.path.split(file_)[1]
-            print(filename)
             date_str = str(filename).split('_')[1]
             file_date = date(int(date_str[:4]), int(date_str[4:6]), 1)
-            # print(file_date)
             file_date = file_date.strftime("%Y")
-            # print(int(file_date))
             date_set.add(file_date)
         print(date_set)
         pro_bool = np.ndarray
         for year in date_set:
             data, lon, lat = data_statistics(data_type='GTI',
-                                             mode_type='all',
+                                             mode_type='origin',
                                              date_start=int(date_end) - 29,
                                              date_end=date_end,
                                              task_choice='yearMean',
@@ -340,7 +340,7 @@ def get_data(date_start, date_end, data_path, data_type, task_key=None, file_lis
                         i += 1
                         data_dir = os.path.join(DATA_1KM_MONTH, data_type)
                         file_hdf = '{}/{}'.format(data_dir, file)
-                        print('file_hdf', file_hdf, data_type)
+                        # print('file_hdf', file_hdf, data_type)
                         data = get_hdf5_data(file_hdf, data_type, 1, 0, [0, np.inf], np.nan)
                         if a != 1:
                             data_sum = data_sum + data
@@ -358,10 +358,8 @@ def get_data(date_start, date_end, data_path, data_type, task_key=None, file_lis
     return results_return, lon, lat, mean_len
 
 
-def np_mean(lis, li_len):
-    print('开始求平均')
+def np_mean(lis):
     sum_a = np.ndarray
-    # print(sum_a)
     a = 0
     for s in lis:
         a += 1
@@ -369,21 +367,21 @@ def np_mean(lis, li_len):
             sum_a = s
         else:
             sum_a = sum_a + s
-    # print(sum_a)
-    np_me = sum_a / li_len
+    np_me = sum_a / a
     return np_me
 
 
 def get_mean(data_dic, task_key, len_get):
+    print('开始计算平均')
     data_mean_dic = {}
     if task_key == task_name_list[0]:
         list_y = []
         for key_d, da in data_dic.items():
             list_y.append(da)
-        data_mean_dic = {'years_mean': np_mean(list_y, len_get)}
+        data_mean_dic = {'years_mean': np_mean(list_y)}
     elif task_key == task_name_list[1]:
         for key_d, da in data_dic.items():
-            data_mean_dic[key_d] = np_mean(da, len_get)
+            data_mean_dic[key_d] = da / len_get
     elif task_key in task_name_list[2:4]:
         s_q_list = [[], [], [], []]
         if task_key == task_name_list[2]:
@@ -392,29 +390,34 @@ def get_mean(data_dic, task_key, len_get):
             name_dic = {'fir': 0, 'sec': 1, 'thr': 2, 'fou': 3}
         for s_q_key, data in data_dic.items():
             filename = os.path.split(s_q_key)[1]
-            # print(filename)
             s_q_str = str(filename).split('_')[1]
-            print('sea_str', s_q_str)
             for na, nu in name_dic.items():
                 if s_q_str == na:
                     s_q_list[nu].append(data)
                 s_q_list[3].append(data)
         for na, nu in name_dic.items():
             if na != 'DJF':
-                data_mean_dic[na] = np_mean(s_q_list[nu], len_get)
+                data_mean_dic[na] = np_mean(s_q_list[nu])
             else:
-                data_mean_dic[na] = np_mean(s_q_list[nu], len_get - 1)
+                data_mean_dic[na] = np_mean(s_q_list[nu])
+    print('平均计算完毕')
     return data_mean_dic
 
 
 def np_ano(one_year, ave_area):
-    # （一年值 - 多年平均值） / 多年平均值 * 100 %
+    """
+    （一年值 - 多年平均值） / 多年平均值 * 100 %
+    :param one_year: 一年值
+    :param ave_area: 多年平均值
+    :return:
+    """
     jp = (one_year - ave_area) / ave_area * 100
     print('距平：', jp)
     return jp
 
 
 def get_ano(task_key, data_dic, mean_dic):
+    print('开始计算距平')
     ano_dic = {}
     for data_key, data in data_dic.items():
         if task_key == task_name_list[0]:
@@ -426,18 +429,74 @@ def get_ano(task_key, data_dic, mean_dic):
         elif task_key in task_name_list[2:4]:
             filename = os.path.split(data_key)[1]
             sea_str = str(filename).split('_')[1]
-            print('sea_str', sea_str)
             ano = np_ano(data, mean_dic[sea_str])
             ano_dic[data_key] = ano
+    print('距平计算完毕')
     return ano_dic
 
 
+def num_point(dataType, taskChoice, dateStart, dateEnd, left_longitude, left_latitude, out_fi=1, dateChoice=None):
+    out_put = data_statistics(
+        data_type=dataType,
+        mode_type='point',
+        task_choice=taskChoice,
+        date_start=dateStart,
+        date_end=dateEnd,
+        date_choice=dateChoice,
+        left_longitude=left_longitude,
+        left_latitude=left_latitude,
+        out_fig=out_fi
+    )
+    return out_put[0], out_put[1], out_put[2]
+
+
+def num_area(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatitude,
+             rightLongitude, rightLatitude, out_fi=1, dateChoice=None):
+    out_put = data_statistics(
+        data_type=dataType,
+        mode_type='area',
+        task_choice=taskChoice,
+        date_start=dateStart,
+        date_end=dateEnd,
+        date_choice=dateChoice,
+        left_longitude=leftLongitude,
+        left_latitude=leftLatitude,
+        right_longitude=rightLongitude,
+        right_latitude=rightLatitude,
+        out_fig=out_fi
+    )
+    return out_put[0], out_put[1], out_put[2]
+
+
+def num_province(dataType, province, taskChoice, dateStart, dateEnd, avg=False, out_fi=1, dateChoice=None):
+    if province == 'all':
+        province = None
+        modeType = 'all'
+    else:
+        modeType = 'province'
+    out_put = data_statistics(
+        data_type=dataType,
+        mode_type=modeType,
+        task_choice=taskChoice,
+        date_start=dateStart,
+        date_end=dateEnd,
+        date_choice=dateChoice,
+        province=province,
+        out_fig=out_fi,
+        avg=avg
+    )
+    return out_put[0], out_put[1], out_put[2]
+
+
+filterwarnings("ignore")
+
+
 def data_statistics(data_type, mode_type, task_choice, date_start=None, date_end=None, date_choice=None, province=None,
-                    avg=None, left_longitude=None, left_latitude=None, right_longitude=None, right_latitude=None,
+                    avg=False, left_longitude=None, left_latitude=None, right_longitude=None, right_latitude=None,
                     out_fig=1):
     """
     :param data_type: 数据类型(GHI/DBI/DHI/GTI/H0/H20/H25)
-    :param mode_type: 范围模式：单点or矩形范围or省or全国(point或area或province或cn或all)
+    :param mode_type: 范围模式：单点or矩形范围or省or全国或不筛选(point或area或province或all或origin)
     :param task_choice:任务: sum, mean, anomaly,'
                              'yearSum, yearMean, yearAnomaly,'
                              'monthSum, monthMean, monthAnomaly,'
@@ -456,7 +515,9 @@ def data_statistics(data_type, mode_type, task_choice, date_start=None, date_end
     :return:元组(字典数据，经度，纬度)或None或错误信息
     """
     print(
-        'data_type, mode_type, task_choice, date_start, date_end, date_choice, province,avg, left_longitude, left_latitude, right_longitude, right_latitude,out_fig')
+        'data_type, mode_type, task_choice, date_start, '
+        'date_end, date_choice, province,avg, left_longitude, '
+        'left_latitude, right_longitude, right_latitude,out_fig')
     print(data_type, mode_type, task_choice, date_start, date_end, date_choice, province,
           avg, left_longitude, left_latitude, right_longitude, right_latitude,
           out_fig)
@@ -466,7 +527,7 @@ def data_statistics(data_type, mode_type, task_choice, date_start=None, date_end
     pass_fig = 0  # 跳过标志位
     txt_hdf_fig = 0  # 选择输出到txt或hdf标志位
     # mode_type列表
-    mode_type_list = ['point', 'area', 'province', 'cn', 'all']
+    mode_type_list = ['point', 'area', 'province', 'all', 'origin']
     # task_choice 列表
     task_choice_list = ['yearSum', 'yearMean', 'yearAnomaly',
                         'monthSum', 'monthMean', 'monthAnomaly',
@@ -495,9 +556,7 @@ def data_statistics(data_type, mode_type, task_choice, date_start=None, date_end
     elif mode_type == 'province' and province is None:
         pass_fig = 1
         final_data = '请输入省级名称'
-    print(final_data)
     if pass_fig == 0:
-        # 通过数据类型、任务类型 判断所需使用的原始数据 检测数据 返回数据文件列表
         date_s = str()
         date_e = str()
         task_name = str()
@@ -508,7 +567,6 @@ def data_statistics(data_type, mode_type, task_choice, date_start=None, date_end
         elif (date_choice is None and date_start and date_end) or (date_start and date_end and date_choice):
             date_s = date_start
             date_e = date_end
-
         if task_choice in task_choice_list[0:3]:
             task_name = task_name_list[0]
             data_path = DATA_1KM_YEAR
@@ -521,21 +579,21 @@ def data_statistics(data_type, mode_type, task_choice, date_start=None, date_end
         elif task_choice in task_choice_list[9:12]:
             task_name = task_name_list[3]
             data_path = DATA_1KM_QUARTER
-
+        # 通过数据类型、任务类型 判断所需使用的原始数据 检测数据 返回数据文件列表
         file_list = judge_file(date_s, date_e, data_type, task_name)
-        # 获取原始数据
+        # 获取数据 若需要使用缓存数据则检测缓存数据是否存在 不存在则生成
         data, lon, lat, len_m = get_data(date_s, date_e, data_path, data_type, task_name, file_list)
         # 原始数据或缓存数据进行处理
-        # num
+        # 获取年值或逐月份多年累加值或逐季节多年累加值或逐季度多年累加值
         data_sec = data
-        # mean
+        # 获取相应数据的平均值
         data_mean_dic = get_mean(data, task_name, len_m)
         if task_choice in ['yearMean',
                            'monthMean',
                            'seasonMean',
                            'quarterMean', ]:
             data_sec = data_mean_dic
-        # dep
+        # 获取相应数据或指定时间的距平
         if task_choice in ['yearAnomaly',
                            'monthAnomaly',
                            'seasonAnomaly',
@@ -559,7 +617,6 @@ def data_statistics(data_type, mode_type, task_choice, date_start=None, date_end
         elif mode_type == mode_type_list[1]:
             loa = np.array(
                 [float(left_longitude), float(left_latitude), float(right_longitude), float(right_latitude)])
-            # row_min, row_max, col_min, col_max = get_area_index_by_lon_lat(loa[0], loa[1], loa[2], loa[3])  # !!！
             row_min, col_min = get_point_index_by_lon_lat(loa[0], loa[1])
             row_max, col_max = get_point_index_by_lon_lat(loa[2], loa[3])
             data_thr = {}
@@ -568,17 +625,15 @@ def data_statistics(data_type, mode_type, task_choice, date_start=None, date_end
             lon = lon[int(row_min):int(row_max) + 1, int(col_min):int(col_max) + 1]
             lat = lat[int(row_min):int(row_max) + 1, int(col_min):int(col_max) + 1]
             final_data = (data_thr, lon, lat)
+            txt_hdf_fig = 1
         elif mode_type in mode_type_list[2:4]:
             # 获取掩码
             sheng_dic = PROVINCE_MASK
             open_file_path = PRO_MASK_HDF
             pro_data = get_hdf5_data(open_file_path, 'province_mask', 1, 0, [0, np.inf], np.nan)
-            print('province:', province)
-            print('avg:', avg)
-            if mode_type != 'cn':
+            if mode_type != 'all':
                 for pr, pr_da in sheng_dic.items():
                     if province in pr:
-                        print(pr)
                         pro_data[pro_data != pr_da] = 0
             pro_bool = pro_data.astype(bool)
             data_thr = {}
@@ -589,16 +644,18 @@ def data_statistics(data_type, mode_type, task_choice, date_start=None, date_end
             final_data_0 = {}
             for ad, da in data_thr.items():
                 final_data_0[ad] = da.reshape(-1, 1)
+                txt_hdf_fig = 1
                 if avg:
                     da = da[da.astype(bool)]
                     avg_data = np.nanmean(da)
-                    final_data_0[int(ad)] = avg_data
+                    final_data_0[ad] = avg_data
+                    txt_hdf_fig = 0
             lon = lon.reshape(-1, 1)
             lat = lat.reshape(-1, 1)
             final_data = (final_data_0, lon, lat)
         else:
             final_data = (data_sec, lon, lat)
-        print(final_data)
+            txt_hdf_fig = 1
         # 输出到txt或hdf
         if out_fig == 1:
             date_str = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -606,68 +663,14 @@ def data_statistics(data_type, mode_type, task_choice, date_start=None, date_end
                 data_point_to_txt(DATA_STAT, final_data[0], data_type, date_str)
             else:
                 data_area_to_hdf(DATA_STAT, final_data[0], lon, lat, data_type, date_str)
+    print(final_data)
     return final_data
-
-
-def num_point(dataType, taskChoice, dateStart, dateEnd, left_longitude, left_latitude, out_fi=1, dateChoice=None):
-    out_put = data_statistics(
-        data_type=dataType,
-        mode_type='point',
-        task_choice=taskChoice,
-        date_start=dateStart,
-        date_end=dateEnd,
-        date_choice=dateChoice,
-        left_longitude=left_longitude,
-        left_latitude=left_latitude,
-        out_fig=out_fi
-    )
-    return out_put[0],out_put[1],out_put[2]
-
-
-def num_area(dataType, taskChoice, dateStart, dateEnd, leftLongitude, leftLatitude,
-             rightLongitude, rightLatitude, out_fi=1, dateChoice=0):
-    out_put = data_statistics(
-        data_type=dataType,
-        mode_type='area',
-        task_choice=taskChoice,
-        date_start=dateStart,
-        date_end=dateEnd,
-        date_choice=dateChoice,
-        left_longitude=leftLongitude,
-        left_latitude=leftLatitude,
-        right_longitude=rightLongitude,
-        right_latitude=rightLatitude,
-        out_fig=out_fi
-    )
-    return out_put[0],out_put[1],out_put[2]
-
-
-def num_province(dataType, province, taskChoice, dateStart, dateEnd, avg=False, out_fi=1, dateChoice=0):
-    if province == 'all':
-        province = None
-        modeType = 'cn'
-    else:
-        modeType = 'province'
-    out_put = data_statistics(
-        data_type=dataType,
-        mode_type=modeType,
-        task_choice=taskChoice,
-        date_start=dateStart,
-        date_end=dateEnd,
-        date_choice=dateChoice,
-        province=province,
-        out_fig=out_fi,
-        avg=avg
-    )
-    return out_put[0],out_put[1],out_put[2]
-
-
-filterwarnings("ignore")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='GFSSI Schedule')
     parser.add_argument('--dataType', '-t', help='数据类型(GHI/DBI/DHI/GTI/H0/H20/H25...)', required=True)
-    parser.add_argument('--modeType', '-m', help='范围模式：单点or矩形范围or省or全国or全部(point或area或province或cn或all)', required=True)
+    parser.add_argument('--modeType', '-m', help='范围模式：单点or矩形范围or省or全国or全部(point或area或province或all或origin)',
+                        required=True)
     parser.add_argument('--province', '-z', help='省级行政区域名称（汉字）', required=False)
     parser.add_argument('--avg', '-g', help='区域平均值（True）', required=False)
     parser.add_argument('--taskChoice', '-c',
@@ -759,4 +762,5 @@ if __name__ == '__main__':
     python3 a04_data_statistics.py -t GHI -m cn -c yearAnomaly -s 2019 -e 2019 
     python3 a04_data_statistics.py -t GHI -m all -c yearAnomaly -s 2019 -e 2019 
     python3 a04_data_statistics.py -t GHI -m cn -c yearMean -s 2019 -e 2019 -g True
+    python3 a04_data_statistics.py -t GHI -m all  -c yearSum -s 2019 -e 2019 -g true
     '''
