@@ -397,7 +397,11 @@ def plot_data_column(data_type=None,
         # title = '{}'.format(data_type)
         title = None
         x_label = ' '
-        y_label_t = get_y_label(data_type, mean_line)
+
+        if 'Anomaly' in task_choice:
+            y_label_t = get_y_label(data_type, True)
+        else:
+            y_label_t = get_y_label(data_type, False)
         if y_label_t:
             y_label = y_label_t
         else:
