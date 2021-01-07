@@ -179,6 +179,18 @@ def get_GTI_OA(GHR, Db, Sdif, lat, y, m):  # 目前只能计算平年
     return OA, sglo, sdir, sdif, sref
 
 
+def set_fillvalue(station):
+    """
+    将无效的日照数据计算的值填充为 -9999
+    :param station:
+    :return:
+    """
+    idx = (station['sr'] < 0) | (station['sh'] < 0)
+    for data_name in ['GHI', 'DBI', 'DHI', 'GTI', 'sdir', 'sdif', 'sref', 'OA']:
+        station[data_name][idx] = -9999
+    return station
+
+
 def cal_stations(file_rz):
     def __ym2date(pd_data):
         y = pd_data['year']
@@ -189,7 +201,7 @@ def cal_stations(file_rz):
     ssi = Ssi.get_ssi_info_by_file(file_rz)
     if ssi is None:
         return
-    ssi = ssi.iloc[0:-1]  # 测试少量数据
+    ssi = ssi.iloc[0:]  # 测试少量数据
 
     # 获取站点数据和系数数据 lats lons height a b c d
     # 'station', 'lat', 'lon', 'height', 'm', 'a', 'b', 'c', 'd'
@@ -221,11 +233,13 @@ def cal_stations(file_rz):
     year = station['year'].to_numpy()
     month = station['month'].to_numpy()
     OA, sglo, sdir, sdif, sref = get_GTI_OA(GHR, Db, Sdif, lat, year, month)
-    station['OA'] = OA
     station['GTI'] = sglo
     station['sdir'] = sdir
     station['sdif'] = sdif
     station['sref'] = sref
+    station['OA'] = OA
+
+    station = set_fillvalue(station)
 
     data = list()
     for i, s in station.iterrows():
@@ -254,7 +268,7 @@ def add_station_value(datas, data_name):
     :return:
     """
     # 左点向左3度
-    index_lon_min = datas['lon'].argmin()
+    index_lon_min = datas['lon'].idxmin()
     lon = datas['lon'][index_lon_min] - 3
     lat = datas['lat'][index_lon_min]
     points_add = np.array((lon, lat)).reshape(1, 2)
@@ -292,7 +306,7 @@ def add_station_value(datas, data_name):
     datas_add = np.append(datas_add, data_)
 
     # 下点向下
-    index_lat_min = datas['lat'].argmin()
+    index_lat_min = datas['lat'].idxmin()
     lon = datas['lon'][index_lat_min]
     lat = datas['lat'][index_lat_min] - 0.8
     point_ = np.array((lon, lat)).reshape(1, 2)
@@ -319,9 +333,22 @@ def grid_data(datas, lons_grid, lats_grid, data_name):
     points = np.concatenate((points, points_add), axis=0)
     data = np.append(data, data_add)
 
-    data_grid = griddata(points, data, (lons_grid, lats_grid), method='cubic', fill_value=0)
+    data_grid = griddata(points, data, (lons_grid, lats_grid), method='cubic')
+    invalid = np.logical_or(data_grid < 0, data_grid > 1000)
+    data_grid[invalid] = np.nan
 
     return data_grid
+
+
+def drop_fillvalue(data_month):
+    """
+    剔除包含无效值的数据
+    :param data_month:
+    :return:
+    """
+    idx = data_month[(data_month['sr'] < 0)].index
+    data_month.drop(idx, inplace=True)
+    return data_month
 
 
 def cal_1km(date_min, date_max):
@@ -336,8 +363,9 @@ def cal_1km(date_min, date_max):
             if data_month is None:
                 print('没有数据: {}'.format(ym))
                 return
-            # else:
-            #     print(data_month.head())
+            else:
+                data_month = drop_fillvalue(data_month)
+                print(data_month.head())
         for data_name in ['GHI', 'DBI', 'DHI', 'GTI']:
             out_dir = os.path.join(DATA_1KM_MONTH, data_name)
             make_sure_path_exists(out_dir)
@@ -408,8 +436,8 @@ def t_cal_station():
 
 
 def t_cal_1km():
-    date_min = date(2019, 1, 1)
-    date_max = date(2019, 12, 1)
+    date_min = date(1990, 1, 1)
+    date_max = date(2020, 12, 1)
     cal_1km(date_min, date_max)
 
 
@@ -417,7 +445,7 @@ if __name__ == '__main__':
     # t_station_info()
     # t_()
     # t_cal_station()
-    # t_cal_1km()
+    t_cal_1km()
     """
     stationInfoFile : str 站点信息
     stationSolarFile :str 光伏数据
