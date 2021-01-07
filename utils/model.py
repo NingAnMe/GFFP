@@ -3,17 +3,31 @@
 # @Time    : 2020-07-14 21:23
 # @Author  : NingAnMe <ninganme@qq.com>
 import os
-from datetime import date
-from collections import defaultdict
-import json
+from datetime import date, datetime
 
 import pandas as pd
-from sqlalchemy import Column, Integer, String, DateTime, Float, ForeignKey, Date
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, String, Float, Date
+from sqlalchemy.ext.declarative import declarative_base
 
-from utils.database import *
-from utils.path import *
+
+from utils.database import session_scope, engine
+from utils.path import AID_PATH
 from utils.config import DB_PATH
+
+
+Base = declarative_base()
+
+
+def to_dict(self):
+    model_dict = dict(self.__dict__)
+    del model_dict['_sa_instance_state']
+    for k, v in model_dict.items():
+        if isinstance(v, datetime):
+            model_dict[k] = model_dict[k].strftime('%Y-%m-%d %H:%M:%S')
+    return model_dict
+
+
+Base.to_dict = to_dict
 
 
 class Station(Base):

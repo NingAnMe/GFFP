@@ -10,12 +10,9 @@
 多对多中间表添加额外信息：https://docs.sqlalchemy.org/en/13/orm/basic_relationships.html#association-object
     https://segmentfault.com/q/1010000022270316/a-1020000022274515
 """
-import os
-from datetime import datetime
 from contextlib import contextmanager
 
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 from utils.config import SQLLITE_DB as database_url
@@ -24,20 +21,6 @@ print("数据库engine：{database_url}".format(database_url=database_url))
 # engine = create_engine(database_url, echo=True, pool_size=10, max_overflow=5)
 engine = create_engine(database_url, echo=False)
 Session = sessionmaker(engine)
-
-Base = declarative_base()
-
-
-def to_dict(self):
-    model_dict = dict(self.__dict__)
-    del model_dict['_sa_instance_state']
-    for k, v in model_dict.items():
-        if isinstance(v, datetime):
-            model_dict[k] = model_dict[k].strftime('%Y-%m-%d %H:%M:%S')
-    return model_dict
-
-
-Base.to_dict = to_dict
 
 
 @contextmanager
@@ -52,7 +35,3 @@ def session_scope():
         raise
     finally:
         session.close()
-
-
-if __name__ == '__main__':
-    Base.metadata.create_all(engine)

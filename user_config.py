@@ -4,7 +4,7 @@
 # @Author  : NingAnMe <ninganme@qq.com>
 import os
 
-DATA_ROOT = '/home/kts_project_v1/gffp/DATA/'  # 数据根目录
+DATA_ROOT = '/DISK/DATA02/PROJECT/SourceData/GFFP_DATA'  # 数据根目录
 # DATA_ROOT = './DATA/'  # 数据根目录
 
 # 原始数据
