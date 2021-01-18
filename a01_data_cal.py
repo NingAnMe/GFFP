@@ -23,6 +23,48 @@ PI = 3.1415926
 E = 1366.1
 
 
+def modiGHI(a, b, r):
+    c = a * (1 + (r[0] * b / 1000 + r[1]) * 0.01)
+    return c
+
+
+def topoCorrection(radiaArray, deltHgt, latitude):
+    rr = [[2.6036, 0.0365], [2.6204, 0.0365], [2.6553, 0.0362], [2.6973, 0.0356], [2.7459, 0.0343],
+          [2.8012, 0.0324], [2.8616, 0.0299], [2.9236, 0.0257], [2.9870, 0.0204]]
+
+    idx = latitude >= 52.5
+    radiaArray[idx] = modiGHI(radiaArray[idx], deltHgt[idx], rr[8])
+
+    idx = np.logical_and(latitude >= 47.5, latitude < 52.5)
+    radiaArray[idx] = modiGHI(radiaArray[idx], deltHgt[idx], rr[7])
+
+    idx = np.logical_and(latitude >= 42.5, latitude < 47.5)
+    radiaArray[idx] = modiGHI(radiaArray[idx], deltHgt[idx], rr[6])
+
+    idx = np.logical_and(latitude >= 37.5, latitude < 42.5)
+    radiaArray[idx] = modiGHI(radiaArray[idx], deltHgt[idx], rr[5])
+
+    idx = np.logical_and(latitude >= 32.5, latitude < 37.5)
+    radiaArray[idx] = modiGHI(radiaArray[idx], deltHgt[idx], rr[4])
+
+    idx = np.logical_and(latitude >= 27.5, latitude < 32.5)
+    radiaArray[idx] = modiGHI(radiaArray[idx], deltHgt[idx], rr[3])
+
+    idx = np.logical_and(latitude >= 22.5, latitude < 27.5)
+    radiaArray[idx] = modiGHI(radiaArray[idx], deltHgt[idx], rr[2])
+
+    idx = np.logical_and(latitude >= 17.5, latitude < 22.5)
+    radiaArray[idx] = modiGHI(radiaArray[idx], deltHgt[idx], rr[1])
+
+    idx = np.logical_and(latitude >= 17.5, latitude < 22.5)
+    radiaArray[idx] = modiGHI(radiaArray[idx], deltHgt[idx], rr[1])
+
+    idx = latitude < 17.5
+    radiaArray[idx] = modiGHI(radiaArray[idx], deltHgt[idx], rr[0])
+
+    return radiaArray
+
+
 def get_EHR(lat, j):
     """
     计算一段时间的EHR
@@ -241,11 +283,14 @@ def cal_stations(file_rz):
 
     station = set_fillvalue(station)
 
+    dates = station['date'].tolist()
+
     data = list()
     for i, s in station.iterrows():
         data.append(s.to_dict())
 
     with session_scope() as session:
+        Station.delete_by_date(session, dates)
         Station.add(session, data=data)
 
     return station['date'].min(), station['date'].max()
@@ -297,7 +342,7 @@ def add_station_value(datas, data_name):
     datas_add = np.append(datas_add, data_)
 
     # 右点向右
-    index_lon_max = datas['lon'].argmax()
+    index_lon_max = datas['lon'].idxmax()
     lon = datas['lon'][index_lon_max] + 1.5
     lat = datas['lat'][index_lon_max]
     point_ = np.array((lon, lat)).reshape(1, 2)
@@ -315,7 +360,7 @@ def add_station_value(datas, data_name):
     datas_add = np.append(datas_add, data_)
 
     # 上点向上
-    index_lat_max = datas['lat'].argmax()
+    index_lat_max = datas['lat'].idxmax()
     lon = datas['lon'][index_lat_max]
     lat = datas['lat'][index_lat_max] + 1.5
     point_ = np.array((lon, lat)).reshape(1, 2)
@@ -328,14 +373,23 @@ def add_station_value(datas, data_name):
 def grid_data(datas, lons_grid, lats_grid, data_name):
     points = datas[['lon', 'lat']].to_numpy()
     data = datas[data_name].to_numpy()
+
+    # 剔除无效值
+    idx = np.logical_and(data > 0, data < 200)
+    points = points[idx]
+    data = data[idx]
+    print(data.min(), data.max(), data.mean())
+
     # 补点
     points_add, data_add = add_station_value(datas, data_name)
     points = np.concatenate((points, points_add), axis=0)
     data = np.append(data, data_add)
 
-    data_grid = griddata(points, data, (lons_grid, lats_grid), method='cubic')
-    invalid = np.logical_or(data_grid < 0, data_grid > 1000)
-    data_grid[invalid] = np.nan
+    data_grid = griddata(points, data, (lons_grid, lats_grid), method='linear')
+    data_grid[data_grid < 0] = 0
+    data_grid[data_grid > 200] = 200
+
+    print(np.nanmin(data_grid), np.nanmax(data_grid), np.nanmean(data_grid))
 
     return data_grid
 
@@ -354,6 +408,7 @@ def drop_fillvalue(data_month):
 def cal_1km(date_min, date_max):
     date_tmp = date_min
     demloder = DemLoader()
+    dem = demloder.get_data()
     lons_grid, lats_grid = demloder.get_lon_lat()
     while date_tmp <= date_max:
         ym = date_tmp.strftime("%Y%m")
@@ -365,7 +420,7 @@ def cal_1km(date_min, date_max):
                 return
             else:
                 data_month = drop_fillvalue(data_month)
-                print(data_month.head())
+                # print(data_month.head())
         for data_name in ['GHI', 'DBI', 'DHI', 'GTI']:
             out_dir = os.path.join(DATA_1KM_MONTH, data_name)
             make_sure_path_exists(out_dir)
@@ -376,6 +431,8 @@ def cal_1km(date_min, date_max):
                 continue
 
             data_grid = grid_data(data_month, lons_grid, lats_grid, data_name)
+
+            data_grid = modiGHI(data_grid, dem, lats_grid)
 
             out_data = {
                 data_name: data_grid,
@@ -436,8 +493,8 @@ def t_cal_station():
 
 
 def t_cal_1km():
-    date_min = date(1990, 1, 1)
-    date_max = date(2020, 12, 1)
+    date_min = date(2019, 1, 1)
+    date_max = date(2019, 12, 1)
     cal_1km(date_min, date_max)
 
 
@@ -445,7 +502,7 @@ if __name__ == '__main__':
     # t_station_info()
     # t_()
     # t_cal_station()
-    t_cal_1km()
+    # t_cal_1km()
     """
     stationInfoFile : str 站点信息
     stationSolarFile :str 光伏数据

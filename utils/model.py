@@ -103,6 +103,13 @@ class Station(Base):
     def query_by_date(cls, session, dt):
         return session.query(Station).filter(Station.date == dt).all()
 
+    @classmethod
+    def delete_by_date(cls, session, dates):
+        response = session.query(Station).filter(Station.date.in_(dates))
+        if response:
+            return response.delete(synchronize_session=False)
+        return
+
 
 class Ssi(Base):
     __tablename__ = "ssi"
