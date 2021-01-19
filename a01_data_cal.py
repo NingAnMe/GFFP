@@ -24,7 +24,8 @@ E = 1366.1
 
 
 def modiGHI(a, b, r):
-    c = a * (1 + (r[0] * b / 1000 + r[1]) * 0.01)
+    coef = (r[0] * b / 1000 + r[1]) * 0.01
+    c = a * (1 + coef)
     return c
 
 
@@ -32,7 +33,7 @@ def topoCorrection(radiaArray, deltHgt, latitude):
     rr = [[2.6036, 0.0365], [2.6204, 0.0365], [2.6553, 0.0362], [2.6973, 0.0356], [2.7459, 0.0343],
           [2.8012, 0.0324], [2.8616, 0.0299], [2.9236, 0.0257], [2.9870, 0.0204]]
 
-    idx = latitude >= 52.5
+    idx = np.logical_and(latitude >= 52.5, latitude <= 90)
     radiaArray[idx] = modiGHI(radiaArray[idx], deltHgt[idx], rr[8])
 
     idx = np.logical_and(latitude >= 47.5, latitude < 52.5)
@@ -59,7 +60,7 @@ def topoCorrection(radiaArray, deltHgt, latitude):
     idx = np.logical_and(latitude >= 17.5, latitude < 22.5)
     radiaArray[idx] = modiGHI(radiaArray[idx], deltHgt[idx], rr[1])
 
-    idx = latitude < 17.5
+    idx = np.logical_and(latitude >= 0, latitude < 17.5)
     radiaArray[idx] = modiGHI(radiaArray[idx], deltHgt[idx], rr[0])
 
     return radiaArray
@@ -283,7 +284,7 @@ def cal_stations(file_rz):
 
     station = set_fillvalue(station)
 
-    dates = station['date'].tolist()
+    dates = station['date'].drop_duplicates().tolist()
 
     data = list()
     for i, s in station.iterrows():
@@ -378,18 +379,18 @@ def grid_data(datas, lons_grid, lats_grid, data_name):
     idx = np.logical_and(data > 0, data < 200)
     points = points[idx]
     data = data[idx]
-    print(data.min(), data.max(), data.mean())
+    print('station data：', data.min(), data.max(), data.mean())
 
     # 补点
-    points_add, data_add = add_station_value(datas, data_name)
-    points = np.concatenate((points, points_add), axis=0)
-    data = np.append(data, data_add)
+    # points_add, data_add = add_station_value(datas, data_name)
+    # points = np.concatenate((points, points_add), axis=0)
+    # data = np.append(data, data_add)
 
     data_grid = griddata(points, data, (lons_grid, lats_grid), method='linear')
     data_grid[data_grid < 0] = 0
     data_grid[data_grid > 200] = 200
 
-    print(np.nanmin(data_grid), np.nanmax(data_grid), np.nanmean(data_grid))
+    print('data grid：', np.nanmin(data_grid), np.nanmax(data_grid), np.nanmean(data_grid))
 
     return data_grid
 
@@ -426,13 +427,16 @@ def cal_1km(date_min, date_max):
             make_sure_path_exists(out_dir)
             filename = '{}_{}.hdf'.format(data_name, ym)
             out_file = os.path.join(out_dir, filename)
-            if os.path.isfile(out_file):
-                print('already exist {}'.format(out_file))
-                continue
+            # if os.path.isfile(out_file):
+            #     print('already exist {}'.format(out_file))
+            #     continue
 
             data_grid = grid_data(data_month, lons_grid, lats_grid, data_name)
 
-            data_grid = modiGHI(data_grid, dem, lats_grid)
+            dem[dem == -9999] = np.nan
+
+            data_grid = topoCorrection(data_grid, dem, lats_grid)
+            print('data_modi：', np.nanmin(data_grid), np.nanmax(data_grid), np.nanmean(data_grid))
 
             out_data = {
                 data_name: data_grid,
@@ -492,17 +496,12 @@ def t_cal_station():
     cal_stations(file_rz)
 
 
-def t_cal_1km():
-    date_min = date(2019, 1, 1)
-    date_max = date(2019, 12, 1)
-    cal_1km(date_min, date_max)
-
-
 if __name__ == '__main__':
     # t_station_info()
     # t_()
     # t_cal_station()
-    # t_cal_1km()
+    cal_1km(date(1990, 1, 1), date(2019, 12, 1))
+    # cal_1km(date(1990, 1, 1), date(2019, 12, 1))
     """
     stationInfoFile : str 站点信息
     stationSolarFile :str 光伏数据
@@ -512,7 +511,7 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser(description='参数计算')
-    parser.add_argument('--stationSolarFile', '-m', help='光伏数据', required=True)
+    parser.add_argument('--stationSolarFile', '-m', help='光伏数据', required=False)
     args = parser.parse_args()
 
     print_config()
