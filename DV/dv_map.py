@@ -8,6 +8,7 @@ import os
 import numpy as np
 import matplotlib as mpl
 import os
+
 os.environ['PROJ_LIB'] = '/opt/KTS_LIB/miniconda3/share/proj'
 mpl.use('Agg')
 from DV.dv_plt import dv_base, str_len, EDGE_LW, colormap_blue2red, COLOR_Darkgray, \
@@ -472,9 +473,9 @@ class dv_map(dv_base):
                 cs.set_clip_path(self.clip_path)
 
         if self.m2 and self.show_inside_china_mini:
-            self.drawOnMiniMap(lats, lons, values, ptype, alpha)
+            self.drawOnMiniMap(lats, lons, values, norm, cmap, ptype, alpha)
 
-    def drawOnMiniMap(self, lats, lons, values, ptype, alpha=1):
+    def drawOnMiniMap(self, lats, lons, values, norm, cmap, ptype, alpha=1):
         '''
         在小地图上的值
         '''
@@ -503,8 +504,8 @@ class dv_map(dv_base):
                 clevs = np.arange(self.valmin, self.valmax + step * 0.1, step)
             else:
                 clevs = self.colorbar_bounds
-
-            cs = m.contourf(x1, y1, var, clevs, norm=self.norm, cmap=self.colormap, zorder=zorder, alpha=alpha)
+            cs = m.contourf(x1, y1, var, clevs, norm=norm, cmap=cmap, zorder=zorder, alpha=alpha,
+                            extend=self.colorbar_extend)
         else:
             cs = m.scatter(x1, y1, marker=self.marker, s=self.markersize, c=var,
                            cmap=self.colormap, norm=self.norm, lw=0, zorder=zorder, alpha=alpha)
