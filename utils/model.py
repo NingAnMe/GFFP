@@ -104,6 +104,10 @@ class Station(Base):
         return session.query(Station).filter(Station.date == dt).all()
 
     @classmethod
+    def query_by_date_range(cls, session, dt_s, dt_e):
+        return session.query(Station).filter(Station.date >= dt_s, Station.date <= dt_e).all()
+
+    @classmethod
     def delete_by_date(cls, session, dates):
         response = session.query(Station).filter(Station.date.in_(dates))
         if response:
@@ -411,6 +415,7 @@ if not os.path.isfile(DB_PATH):
 
 if __name__ == '__main__':
     Base.metadata.create_all(engine)
+    t_station()
     # t_Station()
     # test_PddSku()
     # txt2db_coef()
