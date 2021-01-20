@@ -296,14 +296,6 @@ def plot_data_map(data_type=None,
         #     print('already exist {}'.format(file_out))
         #     continue
 
-        # 使用省均值填充省内的无效值
-        pro_mask_data = get_hdf5_data(PRO_MASK_HDF, 'province_mask', 1, 0, [0, 255], 0)
-        for sheng in PROVINCE_MASK:
-            idx_sheng = pro_mask_data == PROVINCE_MASK[sheng]
-            data_mean = np.nanmean(data[idx_sheng])
-            idx_sheng_nan = np.logical_and(idx_sheng, np.isnan(data_mean))
-            data[idx_sheng_nan] = data_mean
-
         plot_map(data, lons, lats, title=title, vmin=vmin, vmax=vmax,
                  areas=aeres, box=box, ticks=ticks, file_out=file_out,
                  mksize=mksize, nanhai=nanhai)
