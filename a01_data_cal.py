@@ -5,9 +5,10 @@
 from utils.model import Coef, Station, Ssi
 from utils.database import session_scope
 from utils.path import make_sure_path_exists, AID_PATH
-from utils.hdf5 import write_hdf5_and_compress
+from utils.hdf5 import write_hdf5_and_compress, get_hdf5_data
 from utils.data import DemLoader
 from utils.config import COEF_TXT, print_config
+from utils.shp_province import PRO_MASK_HDF
 from user_config import DATA_1KM_MONTH
 
 import os
@@ -17,10 +18,12 @@ from dateutil.relativedelta import relativedelta
 
 import numpy as np
 import pandas as pd
-from scipy.interpolate import griddata
+from scipy import interpolate
 
 PI = 3.1415926
 E = 1366.1
+
+PRO_MASK_DATA = get_hdf5_data(PRO_MASK_HDF, 'province_mask', 1, 0, [0, 255], 0)
 
 
 def modiGHI(a, b, r):
@@ -306,71 +309,6 @@ def get_station_data(ym, session):
     return
 
 
-def add_station_value(datas, data_name):
-    """
-    补点
-    :param datas:
-    :param data_name:
-    :return:
-    """
-    # 左点向左3度
-    index_lon_min = datas['lon'].idxmin()
-    lon = datas['lon'][index_lon_min] - 3
-    lat = datas['lat'][index_lon_min]
-    points_add = np.array((lon, lat)).reshape(1, 2)
-    datas_add = datas[data_name][index_lon_min]
-
-    # 左上点向左上1度
-    index = (datas['lon'] < 87) & (datas['lat'] > 48)
-    lon = datas['lon'][index].iloc[0]
-    lat = datas['lat'][index].iloc[0]
-    lon = lon - 1
-    lat = lat + 1
-    data_ = datas[data_name][index].iloc[0]
-    point_ = np.array((lon, lat)).reshape(1, 2)
-    points_add = np.concatenate((points_add, point_), axis=0)
-    datas_add = np.append(datas_add, data_)
-
-    # 左下点向左下1度
-    index = (datas['lon'] < 83) & (datas['lat'] < 31)
-    lon = datas['lon'][index].iloc[0]
-    lat = datas['lat'][index].iloc[0]
-    lon = lon - 1
-    lat = lat - 1
-    data_ = datas[data_name][index].iloc[0]
-    point_ = np.array((lon, lat)).reshape(1, 2)
-    points_add = np.concatenate((points_add, point_), axis=0)
-    datas_add = np.append(datas_add, data_)
-
-    # 右点向右
-    index_lon_max = datas['lon'].idxmax()
-    lon = datas['lon'][index_lon_max] + 1.5
-    lat = datas['lat'][index_lon_max]
-    point_ = np.array((lon, lat)).reshape(1, 2)
-    data_ = datas[data_name][index_lon_max]
-    points_add = np.concatenate((points_add, point_), axis=0)
-    datas_add = np.append(datas_add, data_)
-
-    # 下点向下
-    index_lat_min = datas['lat'].idxmin()
-    lon = datas['lon'][index_lat_min]
-    lat = datas['lat'][index_lat_min] - 0.8
-    point_ = np.array((lon, lat)).reshape(1, 2)
-    data_ = datas[data_name][index_lat_min]
-    points_add = np.concatenate((points_add, point_), axis=0)
-    datas_add = np.append(datas_add, data_)
-
-    # 上点向上
-    index_lat_max = datas['lat'].idxmax()
-    lon = datas['lon'][index_lat_max]
-    lat = datas['lat'][index_lat_max] + 1.5
-    point_ = np.array((lon, lat)).reshape(1, 2)
-    data_ = datas[data_name][index_lat_max]
-    points_add = np.concatenate((points_add, point_), axis=0)
-    datas_add = np.append(datas_add, data_)
-    return points_add, datas_add
-
-
 def grid_data(datas, lons_grid, lats_grid, data_name):
     points = datas[['lon', 'lat']].to_numpy()
     data = datas[data_name].to_numpy()
@@ -381,12 +319,25 @@ def grid_data(datas, lons_grid, lats_grid, data_name):
     data = data[idx]
     print('station data：', data.min(), data.max(), data.mean())
 
-    # 补点
-    # points_add, data_add = add_station_value(datas, data_name)
-    # points = np.concatenate((points, points_add), axis=0)
-    # data = np.append(data, data_add)
+    # ################ griddata
+    data_grid = interpolate.griddata(points, data, (lons_grid, lats_grid), method='linear')
 
-    data_grid = griddata(points, data, (lons_grid, lats_grid), method='linear')
+    # ################ RBF 原始
+    rbf = interpolate.Rbf(points[:, 0], points[:, 1], data, function='linear')
+    index_two = np.logical_and(np.isnan(data_grid), PRO_MASK_DATA != 0)
+    data_grid[index_two] = rbf(lons_grid[index_two], lats_grid[index_two])
+
+    # ################ RBF 2d 加速
+    # rbf = interpolate.Rbf(points[:, 0], points[:, 1], data, function='linear')
+    # import dask.array as da
+    # n1 = lons_grid.shape[1]
+    # ix = da.from_array(lons_grid, chunks=(1, n1))
+    # iy = da.from_array(lats_grid, chunks=(1, n1))
+    # iz = da.map_blocks(rbf, ix, iy)
+    # zz = iz.compute()
+    # data_grid = zz
+
+    # 剔除补点以后的无效值
     data_grid[data_grid < 0] = 0
     data_grid[data_grid > 200] = 200
 
@@ -433,10 +384,15 @@ def cal_1km(date_min, date_max):
 
             data_grid = grid_data(data_month, lons_grid, lats_grid, data_name)
 
+            pro_mask_data = get_hdf5_data(PRO_MASK_HDF, 'province_mask', 1, 0, [0, 255], 0)
+            data_grid[pro_mask_data == 0] = np.nan
+
+            print('data china：', np.nanmin(data_grid), np.nanmax(data_grid), np.nanmean(data_grid))
+
             dem[dem == -9999] = np.nan
 
             data_grid = topoCorrection(data_grid, dem, lats_grid)
-            print('data_modi：', np.nanmin(data_grid), np.nanmax(data_grid), np.nanmean(data_grid))
+            print('data correc：', np.nanmin(data_grid), np.nanmax(data_grid), np.nanmean(data_grid))
 
             out_data = {
                 data_name: data_grid,
@@ -500,8 +456,8 @@ if __name__ == '__main__':
     # t_station_info()
     # t_()
     # t_cal_station()
+    cal_1km(date(2008, 1, 1), date(2019, 12, 1))
     cal_1km(date(1990, 1, 1), date(2019, 12, 1))
-    # cal_1km(date(1990, 1, 1), date(2019, 12, 1))
     """
     stationInfoFile : str 站点信息
     stationSolarFile :str 光伏数据
