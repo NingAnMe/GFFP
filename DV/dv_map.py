@@ -411,6 +411,7 @@ class dv_map(dv_base):
                 clevs = np.arange(self.valmin, self.valmax + step * 0.1, step)
             else:
                 clevs = self.colorbar_bounds
+                norm = mpl.colors.Normalize(vmin=clevs[0], vmax=clevs[-1])
 
             cs = m.contourf(x1, y1, var, clevs, norm=norm, cmap=cmap, zorder=zorder, alpha=alpha,
                             extend=self.colorbar_extend)
@@ -500,10 +501,11 @@ class dv_map(dv_base):
                            alpha=alpha)
         elif ptype == 'contourf':
             if self.colorbar_bounds is None:
-                step = (self.valmax - self.valmin) / 512.
+                step = (self.valmax - self.valmin) / self.contour_level
                 clevs = np.arange(self.valmin, self.valmax + step * 0.1, step)
             else:
                 clevs = self.colorbar_bounds
+                norm = mpl.colors.Normalize(vmin=clevs[0], vmax=clevs[-1])
             cs = m.contourf(x1, y1, var, clevs, norm=norm, cmap=cmap, zorder=zorder, alpha=alpha,
                             extend=self.colorbar_extend)
         else:
