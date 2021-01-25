@@ -213,6 +213,10 @@ def get_GTI_OA(GHR, Db, Sdif, lat, y, m):  # 目前只能计算平年
 
     sref = glo * (1 - np.cos(angle)) / 2 * 0.2  # sref即倾斜面反射辐射
 
+    sdir = sdir / 1.06
+    sdif = sdif / 1.06
+    sref = sref / 1.06
+
     sglo = sdir + sdif + sref  # sglo即倾斜面总辐射
 
     index_max = np.nanargmax(sglo, axis=1)
@@ -378,9 +382,9 @@ def cal_1km(date_min, date_max):
             make_sure_path_exists(out_dir)
             filename = '{}_{}.hdf'.format(data_name, ym)
             out_file = os.path.join(out_dir, filename)
-            # if os.path.isfile(out_file):
-            #     print('already exist {}'.format(out_file))
-            #     continue
+            if os.path.isfile(out_file):
+                print('already exist {}'.format(out_file))
+                continue
 
             data_grid = grid_data(data_month, lons_grid, lats_grid, data_name)
 
@@ -456,8 +460,8 @@ if __name__ == '__main__':
     # t_station_info()
     # t_()
     # t_cal_station()
-    cal_1km(date(2008, 1, 1), date(2019, 12, 1))
-    cal_1km(date(1990, 1, 1), date(2019, 12, 1))
+    # cal_1km(date(2008, 1, 1), date(2019, 12, 1))
+    # cal_1km(date(1990, 11, 1), date(2007, 12, 1))
     """
     stationInfoFile : str 站点信息
     stationSolarFile :str 光伏数据
