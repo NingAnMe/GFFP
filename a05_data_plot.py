@@ -37,30 +37,30 @@ PICTURE_RANGE = {
     '1': [0, 1750],
     '2': [0, 1050, 1400, 1750, 2100],
     '3': [-10, -5, -2, 0, 2, 5, 10],
-    '4': [-10, -5, -2, 0, 2, 5, 10],
-    '5': [-10, -5, -2, 0, 2, 5, 10],
+    '4': [-10, 10],
+    '5': [-10, 10],
     '6': [-10, -5, -2, 0, 2, 5, 10],
     '7': [-10, -5, -2, 0, 2, 5, 10],
     '8': [-10, -5, -2, 0, 2, 5, 10],
     '9': [-10, -5, -2, 0, 2, 5, 10],
-    '10': range(1000, 2001, 200),
-    '11': range(800, 1801, 100),
+    '10': [1000, 1200, 1400, 1600, 1800, 2000],
+    '11': [800, 900, 1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800],
     '12': [-10, -5, -2, 0, 2, 5, 10],
-    '13': [-10, -5, -2, 0, 2, 5, 10],
-    '14': [0, 1750],
-    '15': [-10, -5, -2, 0, 2, 5, 10],
-    '16': [-10, -5, -2, 0, 2, 5, 10],
+    '13': [-10, 10],
+    '14': [0, 2100],
+    '15': [-10, 10],
+    '16': [-10, 10],
     '17': None,
     '18': [0, 1750],
     '19': [0, 1750],
     '20': [0, 1750],
     '21': [0, 1750],
     '22': [0, 1750],
-    '23': [-20, -15, -10, 5, 0, 5, 10, 15, 20],
-    '24': [-20, -15, -10, 5, 0, 5, 10, 15, 20],
-    '25': [-20, -15, -10, 5, 0, 5, 10, 15, 20],
-    '26': [-20, -15, -10, 5, 0, 5, 10, 15, 20],
-    '27': [-20, -15, -10, 5, 0, 5, 10, 15, 20],
+    # '23': [-20, 20],
+    # '24': [-20, 20],
+    # '25': [-20, 20],
+    # '26': [-20, 20],
+    # '27': [-20, 20],
 }
 
 
@@ -138,6 +138,7 @@ def plot_map(data, lons, lats, title=None, vmin=-np.inf, vmax=np.inf, areas=None
             value[value > ticks[-2]] = ticks[-1]
             value[value < ticks[1]] = ticks[0]
 
+    print(p.colorbar_bounds)
     p.easyplot(latitude, longitude, value, vmin=vmin, vmax=vmax, box=box, markersize=mksize, ptype=ptype)
 
     # TODO 增加设置省份的功能
@@ -279,9 +280,10 @@ def plot_data_map(data_type=None,
         vmax = None
         ticks = None
         picture_range = PICTURE_RANGE.get(picture_number)
+        print('picture_range', picture_range)
         if picture_range:
-            if len(picture_number) != 2:
-                ticks = PICTURE_RANGE.get(picture_number)
+            if len(picture_range) != 2:
+                ticks = picture_range
             else:
                 vmin = picture_range[0]
                 vmax = picture_range[1]
@@ -295,7 +297,6 @@ def plot_data_map(data_type=None,
         # if os.path.isfile(file_out):
         #     print('already exist {}'.format(file_out))
         #     continue
-
         plot_map(data, lons, lats, title=title, vmin=vmin, vmax=vmax,
                  areas=aeres, box=box, ticks=ticks, file_out=file_out,
                  mksize=mksize, nanhai=nanhai)
@@ -404,7 +405,7 @@ def plot_data_column(data_type=None,
         for time, data in datas.items():
             x_y[time] = dict()
             village_info[data_type] = datas[date_choice]
-            values = village_info.groupby('sheng')[dataType].agg('mean')
+            values = village_info.groupby('sheng')[data_type].agg('mean')
             values = values.sort_values()
             x = pd.Series(values.index)
             x[x == '广西壮族自治区'] = '广西'
@@ -447,6 +448,7 @@ def plot_data_column(data_type=None,
     y_range = None
 
     picture_range = PICTURE_RANGE.get(picture_number)
+    print('picture_range', picture_range)
     if picture_range:
         if len(picture_range) == 2:
             y_range = picture_range
@@ -634,47 +636,47 @@ if __name__ == '__main__':
 
     """
     图1
-    python3 a05_data_plot.py -t GHI -y column -m all -z time -c yearSum -s 2010 -e 2020 -p 1
+    python3 a05_data_plot.py -t GHI -y column -m all -z time -c yearSum -s 2009 -e 2019 -p 1
 
     图2
-    python3 a05_data_plot.py -t GHI -y map -m all -c yearSum -s 2020 -e 2020 -p 2
+    python3 a05_data_plot.py -t GHI -y map -m all -c yearSum -s 2019 -e 2019 -p 2
 
     图3
-    python3 a05_data_plot.py -t GHI -y map -m all -c yearAnomaly -s 2010 -e 2019 -o 2020 -p 3
+    python3 a05_data_plot.py -t GHI -y map -m all -c yearAnomaly -s 2009 -e 2018 -o 2019 -p 3
 
     图4
-    python3 a05_data_plot.py -t GHI -y column -m all -z province -c yearAnomaly -s 2010 -e 2019 -o 2020 -p 4
+    python3 a05_data_plot.py -t GHI -y column -m all -z province -c yearAnomaly -s 2009 -e 2018 -o 2019 -p 4
     
     图5
-    python3 a05_data_plot.py -t GHI -y column -m all -z time -c monthAnomaly -s 2010 -e 2019 -o 2020 -p 5
+    python3 a05_data_plot.py -t GHI -y column -m all -z time -c monthAnomaly -s 2009 -e 2018 -o 2019 -p 5
     
     图6、7、8、9
-    python3 a05_data_plot.py -t GHI -y map -m all -c quarterAnomaly -s 2010 -e 2019 -o 2020 -p 6
+    python3 a05_data_plot.py -t GHI -y map -m all -c quarterAnomaly -s 2009 -e 2018 -o 2019 -p 6
     
     图10
-    python3 a05_data_plot.py -t GTI -y map -m all -c yearSum -s 2020 -e 2020 -p 10
+    python3 a05_data_plot.py -t GTI -y map -m all -c yearSum -s 2019 -e 2019 -p 10
     
     图11
-    python3 a05_data_plot.py -t H0 -y map -m all -c yearSum -s 2020 -e 2020 -p 11
+    python3 a05_data_plot.py -t H0 -y map -m all -c yearSum -s 2019 -e 2019 -p 11
     
     图12
-    python3 a05_data_plot.py -t GTI -y map -m all -c yearAnomaly -s 2010 -e 2019 -o 2020 -p 12
+    python3 a05_data_plot.py -t GTI -y map -m all -c yearAnomaly -s 2009 -e 2018 -o 2019 -p 12
     
     图13
-    python3 a05_data_plot.py -t GTI -y column -m all -z province -c yearAnomaly -s 2010 -e 2019 -o 2020 -p 13
+    python3 a05_data_plot.py -t GTI -y column -m all -z province -c yearAnomaly -s 2009 -e 2018 -o 2019 -p 13
 
     图14
-    python3 a05_data_plot.py -t GHI -y map -m village -c yearSum -s 2020 -e 2020 -p 14
+    python3 a05_data_plot.py -t GHI -y map -m village -c yearSum -s 2019 -e 2019 -p 14
     
     图15
-    python3 a05_data_plot.py -t GHI -y map -m village -c yearAnomaly -s 2010 -e 2019 -o 2020 -p 15
+    python3 a05_data_plot.py -t GHI -y map -m village -c yearAnomaly -s 2009 -e 2018 -o 2019 -p 15
     
     图16
-    python3 a05_data_plot.py -t GHI -y column -m village -z province -c yearAnomaly -s 2010 -e 2019 -o 2020 -p 16
+    python3 a05_data_plot.py -t GHI -y column -m village -z province -c yearAnomaly -s 2009 -e 2018 -o 2019 -p 16
     
     图18、19、20、21、22
-    python3 a05_data_plot.py -t GHI -y column -m point -z time -c yearSum -s 2010 -e 2020 -l 115.0 -a 31.2 -p 18
+    python3 a05_data_plot.py -t GHI -y column -m point -z time -c yearSum -s 2009 -e 2019 -l 115.0 -a 31.2 -p 18
     
     图23、24、25、26、27
-    python3 a05_data_plot.py -t GHI -y column -m point -z time -c monthAnomaly -s 2010 -e 2019 -o 2020 -l 115.0 -a 31.2 -p 23
+    python3 a05_data_plot.py -t GHI -y column -m point -z time -c monthAnomaly -s 2009 -e 2018 -o 2019 -l 115.0 -a 31.2 -p 23
     """
