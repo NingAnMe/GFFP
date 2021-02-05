@@ -15,13 +15,12 @@ from shapely.geometry import Point, Polygon
 import numpy as np
 import pandas as pd
 from utils.path import ROOT_PATH, AID_PATH
-from utils.config import PRO_MASK_HDF, DEM_HDF
+from utils.config import DEM_HDF
 from utils.hdf5 import get_hdf5_data, write_hdf5_and_compress
 # import multiprocessing
 import geopandas as gpd
 import copy
-from datetime import datetime, timedelta
-import h5py
+from datetime import datetime
 from collections import defaultdict
 import time
 
@@ -254,7 +253,6 @@ def shp_to_hdf(name_points_dic, name_code_dic, out_put_file, name_loa_min_max):
                     time.sleep(30)
                     continue
 
-                print('时间：', datetime.now())
         if time_end:
             print('此区域用时：', datetime.now() - time_end)
             print('此次总共用时：', datetime.now() - time_start)
