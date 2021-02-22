@@ -37,9 +37,10 @@ def get_village_data(date_start, date_end, date_choice):
                                                  task_choice='yearAnomaly',
                                                  date_start=date_start,
                                                  date_end=date_end,
-                                                 date_choice=str(int(date_choice) - 1),
+                                                 date_choice=date_choice,
                                                  left_longitude=lon,
                                                  left_latitude=lat,
+                                                 out_fig=0
                                                  )
     data_village = None
 
@@ -56,14 +57,20 @@ def get_village_data(date_start, date_end, date_choice):
                 l_v += 1
                 if da < -5:
                     l_v_5 += 1
-    villagehighper = '{}%'.format(round(h_v / nov * 100, 2))
-    villagelowper = '{}%'.format(round(l_v / nov * 100, 2))
-    willagehighfiveper = '{}%'.format(round(h_v_5 / nov * 100, 2))
-    villagelowfiveper = '{}%'.format(round(l_v_5 / nov * 100, 2))
+    villagehighper = '{}%'.format(round(h_v / nov * 100, 1))
+    villagelowper = '{}%'.format(round(l_v / nov * 100, 1))
+    villagehighfiveper = '{}%'.format(round(h_v_5 / nov * 100, 1))
+    villagelowfiveper = '{}%'.format(round(l_v_5 / nov * 100, 1))
+    data_village[data_village == -9999] = np.nan
     xillagehighano = np.nanmax(data_village)
     villagelowano = np.nanmin(data_village)
-    xillagehighanomaly = '{}%'.format(round(float(xillagehighano), 2))
-    villagelowanomaly = '{}%'.format(round(float(villagelowano), 2))
+    villagehighanomaly = '{}%'.format(round(float(xillagehighano), 1))
+    villagelowanomaly = '{}%'.format(round(float(villagelowano), 1))
+    print('------------------')
+    print(np.argwhere(data_village == xillagehighano))
+    print('------------------', villagelowano)
+    print(np.argwhere(data_village == villagelowano))
+    print('------------------')
     xillagehighanomaly_choice = int(np.argwhere(data_village == xillagehighano))
     villagelowanomaly_choice = int(np.argwhere(data_village == villagelowano))
     willagehigh_sheng = sheng[xillagehighanomaly_choice]
@@ -72,14 +79,21 @@ def get_village_data(date_start, date_end, date_choice):
     villagelow_sheng = sheng[villagelowanomaly_choice]
     villagelow_xian = xian[villagelowanomaly_choice]
     villagelow_xiang = xiang[villagelowanomaly_choice]
-    willagehigh = willagehigh_sheng + willagehigh_xian + willagehigh_xiang
+    villagehigh = willagehigh_sheng + willagehigh_xian + willagehigh_xiang
     villagelow = villagelow_sheng + villagelow_xian + villagelow_xiang
     print(
-        '全国太阳能资源偏高的贫困村占比约{}，偏高百分比超过5%的贫困村占比约{}，其中最高值出现在{}，距平百分率为{}全国太阳能资源偏低的贫困村占比约{}，偏低百分比低于-5%的贫困村占比约{}，其中最低值出现在${}，距平百分率为{}'.format(
-            villagehighper, willagehighfiveper, willagehigh, xillagehighanomaly, villagelowper, villagelowfiveper,
+        '全国太阳能资源偏高的贫困村占比约{}，'
+        '偏高百分比超过5%的贫困村占比约{}，'
+        '其中最高值出现在{}，距平百分率为{}'
+        '全国太阳能资源偏低的贫困村占比约{}，'
+        '偏低百分比低于-5%的贫困村占比约{}，'
+        '其中最低值出现在${}，距平百分率为{}'.format(
+            villagehighper, villagehighfiveper,
+            villagehigh, villagehighanomaly,
+            villagelowper, villagelowfiveper,
             villagelow, villagelowanomaly))
-    dat_rt_dic = {'villagehighper': villagehighper, 'willagehighfiveper': willagehighfiveper,
-                  'willagehigh': willagehigh, 'xillagehighanomaly': xillagehighanomaly,
+    dat_rt_dic = {'villagehighper': villagehighper, 'villagehighfiveper': villagehighfiveper,
+                  'villagehigh': villagehigh, 'villagehighanomaly': villagehighanomaly,
                   'villagelowper': villagelowper, 'villagelowfiveper': villagelowfiveper,
                   'villagelow': villagelow, 'villagelowanomaly': villagelowanomaly}
     data_rt = json.dumps(dat_rt_dic)
@@ -94,4 +108,5 @@ if __name__ == '__main__':
     parser.add_argument('--dateChoice', '-o', help='指定计算年份，YYYY(2019)', required=False)
     args = parser.parse_args()
     get_village_data(args.dateStart, args.dateEnd, args.dateChoice, )
-    # python3 a06_get_village_data.py -s 2009 -e 2018 -o 2020
+    # python3 a06_get_village_data.py -s 2010 -e 2018 -o 2019
+    # python3 a06_get_village_data.py -s 2009 -e 2018 -o 2019
