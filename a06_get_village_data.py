@@ -54,7 +54,7 @@ def get_village_data(date_start, date_end, date_choice):
                     h_v_5 += 1
             else:
                 l_v += 1
-                if da < 5:
+                if da < -5:
                     l_v_5 += 1
     villagehighper = '{}%'.format(round(h_v / nov * 100, 2))
     villagelowper = '{}%'.format(round(l_v / nov * 100, 2))
