@@ -390,7 +390,10 @@ class dv_map(dv_base):
         if vmax is None and type(values).__name__ != "str":
             vmax = np.max(values)
 
-        norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
+        if self.colorbar_bounds is not None:
+            norm = mpl.colors.BoundaryNorm(boundaries=self.colorbar_bounds, ncolors=256, extend=self.colorbar_extend)
+        else:
+            norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
         # self.norm = norm
 
         m = self.m
