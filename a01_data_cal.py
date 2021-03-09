@@ -327,9 +327,12 @@ def grid_data(datas, lons_grid, lats_grid, data_name):
     data_grid = interpolate.griddata(points, data, (lons_grid, lats_grid), method='linear')
 
     # ################ RBF 原始
-    rbf = interpolate.Rbf(points[:, 0], points[:, 1], data, function='linear')
-    index_two = np.logical_and(np.isnan(data_grid), PRO_MASK_DATA != 0)
-    data_grid[index_two] = rbf(lons_grid[index_two], lats_grid[index_two])
+    try:
+        rbf = interpolate.Rbf(points[:, 0], points[:, 1], data, function='linear')
+        index_two = np.logical_and(np.isnan(data_grid), PRO_MASK_DATA != 0)
+        data_grid[index_two] = rbf(lons_grid[index_two], lats_grid[index_two])
+    except np.linalg.LinAlgError:
+        print("矩阵不可逆")
 
     # ################ RBF 2d 加速
     # rbf = interpolate.Rbf(points[:, 0], points[:, 1], data, function='linear')
@@ -472,10 +475,13 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='参数计算')
     parser.add_argument('--stationSolarFile', '-m', help='光伏数据', required=False)
+    parser.add_argument('--dateStart', '-s', help='开始年份，YYYYMM(201901)', required=False)
+    parser.add_argument('--dateEnd', '-e', help='结束年份，YYYYMM(201912)', required=False)
     args = parser.parse_args()
 
     print_config()
     print('stationSolarFile == {}'.format(args.stationSolarFile))
+
     if os.path.isfile(args.stationSolarFile):
         print('开始计算光伏参数')
         date_min_date_max = cal_stations(args.stationSolarFile)
@@ -488,6 +494,9 @@ if __name__ == '__main__':
             exit(0)
         else:
             exit(-1)
+    elif args.dateStart is not None and args.dateEnd is not None:
+        cal_1km(date(int(args.dateStart[0: 4]), int(args.dateStart[4: 6]), 1),
+                date(int(args.dateEnd[0: 4]), int(args.dateEnd[4: 6]), 1))
     else:
         print('ERROR: 输入参数错误，文件不存在：{}'.format(args.stationSolarFile))
         exit(-1)
