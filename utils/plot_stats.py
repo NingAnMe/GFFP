@@ -251,7 +251,7 @@ def plot_bar(
     # style_path = STYLE_PATH
     # style_file = os.path.join(style_path, 'plot_histogram.mplstyle')
     # plt.style.use(style_file)
-    figsize = (9, 8)
+    figsize = (9, 6.5)
     dpi = 200
     fig = plt.figure(figsize=figsize, dpi=dpi)
     ax1 = plt.subplot2grid((1, 1), (0, 0))
@@ -261,7 +261,7 @@ def plot_bar(
     # 画柱状图
     sns.set_style("whitegrid")
 
-    ax1.bar(x, y, label='柱状图值')
+    ax1.bar(x, y, label='历年值')
     ax1.tick_params(axis='x', rotation=270)
     # 画平均线
     if mean_line:
@@ -303,7 +303,7 @@ def plot_bar(
     # --------------------
     plt.tight_layout()
     fig.suptitle(title, y=0.94, ha='center', fontproperties=TITLE_FONT)
-    fig.subplots_adjust(bottom=0.15, top=0.85)
+    fig.subplots_adjust(bottom=0.15, top=0.95)
 
     if ymd_start and ymd_end:
         fig.text(0.50, 0.02, '%s-%s' % (ymd_start, ymd_end), fontproperties=BOTTOM_FONT)
