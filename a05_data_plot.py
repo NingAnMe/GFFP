@@ -35,20 +35,20 @@ from a04_data_statistics import num_area, num_point
 
 PICTURE_RANGE = {
     '1': [0, 1750],
-    '2': [0, 1050, 1400, 1750, 2100],
-    '3': [-10, -5, -2, 0, 2, 5, 10],
+    '2': [1050, 1400, 1750],
+    '3': [-5, -2, 0, 2, 5],
     '4': [-10, 10],
     '5': [-10, 10],
-    '6': [-10, -5, -2, 0, 2, 5, 10],
-    '7': [-10, -5, -2, 0, 2, 5, 10],
-    '8': [-10, -5, -2, 0, 2, 5, 10],
-    '9': [-10, -5, -2, 0, 2, 5, 10],
-    '10': [1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400],
+    '6': [-5, -2, 0, 2, 5],
+    '7': [-5, -2, 0, 2, 5],
+    '8': [-5, -2, 0, 2, 5],
+    '9': [-5, -2, 0, 2, 5],
+    '10': [1000, 1200, 1400, 1600, 1800, 2000, 2200],
     '11': [800, 900, 1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800],
-    '12': [-10, -5, -2, 0, 2, 5, 10],
+    '12': [-5, -2, 0, 2, 5],
     '13': [-10, 10],
-    '14': [0, 2100],
-    '15': [-10, 10],
+    '14': [800, 900, 1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800],
+    '15': [-5, -2, 0, 2, 5],
     '16': [-10, 10],
     '17': None,
     '18': [0, 1750],
@@ -77,8 +77,9 @@ def plot_map(data, lons, lats, title=None, vmin=-np.inf, vmax=np.inf, areas=None
     value = data
     out_file = file_out
     if vmin is not None and vmax is not None:
-        valid = np.logical_and(value > vmin, value < vmax)
-        value[~valid] = np.nan
+        pass
+        # valid = np.logical_and(value > vmin, value < vmax)
+        # value[~valid] = np.nan
     else:
         value[value == 0] = np.nan
         vmin = np.nanmin(value)
@@ -86,11 +87,11 @@ def plot_map(data, lons, lats, title=None, vmin=-np.inf, vmax=np.inf, areas=None
 
     # 开始画图-----------------------
 
-    fig = plt.figure(figsize=(9, 8))  # 图像大小
+    fig = plt.figure(figsize=(9, 6.5))  # 图像大小
 
     p = dv_map(fig=fig)
 
-    subplots_adjust(left=0.07, right=0.98, top=0.90, bottom=0.15)
+    subplots_adjust(left=0.07, right=0.96, top=1, bottom=0.15)
     p.show_colorbar = False
     p.show_countries = False
     p.show_coastlines = False
@@ -126,8 +127,8 @@ def plot_map(data, lons, lats, title=None, vmin=-np.inf, vmax=np.inf, areas=None
     print('vmax == {}'.format(vmax))
     p.valmin = vmin
     p.valmax = vmax
-    p.colormap = plt.get_cmap('jet')  # mpl.cm.rainbow, summer, jet, bwr
-    # p.colorbar_extend = "max"
+    # p.colormap = plt.get_cmap('jet')  # mpl.cm.rainbow, summer, jet, bwr
+    p.colorbar_extend = "both"  # both
 
     # plot
     print(latitude.shape, longitude.shape, value.shape)
@@ -135,9 +136,10 @@ def plot_map(data, lons, lats, title=None, vmin=-np.inf, vmax=np.inf, areas=None
     if ptype == 'contourf':
         if ticks:
             p.colorbar_bounds = ticks
-            value[value > ticks[-2]] = ticks[-1]
-            value[value < ticks[1]] = ticks[0]
+            # value[value > ticks[-2]] = ticks[-1]  # 去除对最大最小值的限制
+            # value[value < ticks[1]] = ticks[0]
 
+    print(ptype)
     print(p.colorbar_bounds)
     p.easyplot(latitude, longitude, value, vmin=vmin, vmax=vmax, box=box, markersize=mksize, ptype=ptype)
 
@@ -158,7 +160,7 @@ def plot_map(data, lons, lats, title=None, vmin=-np.inf, vmax=np.inf, areas=None
     #                       fontsize=fontsize)
     c_ax = fig.add_axes(cb_loc)
     # cbar = fig.colorbar(p.cs, cax=c_ax, ticks=np.arange(0, 1.6, 0.3), orientation='horizontal')
-    fig.colorbar(p.cs, cax=c_ax, ticks=ticks, orientation='horizontal')
+    fig.colorbar(p.cs, cax=c_ax, ticks=ticks, orientation='horizontal', extend=p.colorbar_extend)
     for l in c_ax.xaxis.get_ticklabels():
         l.set_fontproperties(p.font_mid)
         l.set_fontsize(fontsize)
@@ -284,9 +286,11 @@ def plot_data_map(data_type=None,
         if picture_range:
             if len(picture_range) != 2:
                 ticks = picture_range
+                vmin = picture_range[0]
+                vmax = picture_range[-1]
             else:
                 vmin = picture_range[0]
-                vmax = picture_range[1]
+                vmax = picture_range[-1]
 
         aeres = None
 
@@ -472,6 +476,18 @@ def plot_data_column(data_type=None,
             y_label = y_label_t
         else:
             y_label = '{}'.format(data_type)
+        if area_value == 'time':  # 如果x轴是年份
+            if 'year' in task_choice:
+                x_label = '年'
+            elif 'month' in task_choice:
+                x_label = '月'
+            elif 'season' in task_choice:
+                x_label = '季节'
+            elif 'quarter' in task_choice:
+                x_label = '季度'
+        elif area_value == 'province':  # 如果x轴是省份
+            x_label = '省（市、区）'
+
         plts.plot_bar(x, y, out_file=file_out, title=title, x_label=x_label,
                       y_label=y_label, y_range=y_range, data_type=area_value, mean_line=mean_line)
 
