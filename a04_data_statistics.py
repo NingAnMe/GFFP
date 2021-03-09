@@ -94,7 +94,7 @@ def get_group_files(files, group_key, date_start, date_end):
     :param date_start: str 开始时间
     :param date_end:  str
     :return: {key1:{key2:[files],}}
-            {year:{m:[files],}}{m:{m:[files],}}{year:{sea:[files],}}{year:{qua:[files],}}
+            {year:{y:[files],}}{m:{m:[files],}}{year:{sea:[files],}}{year:{qua:[files],}}
     """
     data_dic = {}
     for fi in files:
@@ -105,7 +105,15 @@ def get_group_files(files, group_key, date_start, date_end):
         y = int(file_date.year)
         m = int(file_date.month)
         if group_key == task_name_list[0]:
-            data_dic[y] = {m: [fi]}
+            try:
+                data_dic[y]
+            except:
+                data_dic[y] = {}
+            try:
+                data_dic[y][y]
+            except:
+                data_dic[y][y] = []
+            data_dic[y][y].append(fi)
         elif group_key == task_name_list[1]:
             try:
                 data_dic[m]
@@ -283,8 +291,9 @@ def get_data(date_start, date_end, data_path, data_type, task_key=None, file_lis
         for year in date_set:
             data, lon, lat = data_statistics(data_type='GTI',
                                              mode_type='origin',
-                                             date_start=int(date_end) - 29,
-                                             date_end=date_end,
+                                             # date_start=int(year) - 29,
+                                             date_start=int(year),
+                                             date_end=year,
                                              task_choice='yearMean',
                                              out_fig=0)
             da_h = float()
@@ -299,16 +308,21 @@ def get_data(date_start, date_end, data_path, data_type, task_key=None, file_lis
             mean_len = len(results_return)
     else:
         files = get_month_data_by_start_end(date_start, date_end, data_type)  # 获取月数据列表
+        print('files', files)
         i = 0
         lon = np.ndarray
         lat = np.ndarray
-        # {year:{m:[files],}} {m:{m:[files],}} {year:{sea:[files],}} {year:{qua:[files],}}
+        # {year:{y:[files],}} {m:{m:[files],}} {year:{sea:[files],}} {year:{qua:[files],}}
         group_files = get_group_files(files, task_key, date_start, date_end)
+        print('group_files', group_files)
         if task_key != task_name_list[1]:
             mean_len = len(group_files)
         for first_key, files_one_year in group_files.items():
             fig = 0
             for second_key, dic_files_list in files_one_year.items():
+                if task_key == task_name_list[0] and len(dic_files_list) != 12:
+                    continue
+                print('dic_files_list', dic_files_list)
                 a = 0
                 if fig == 1:
                     continue
@@ -333,6 +347,7 @@ def get_data(date_start, date_end, data_path, data_type, task_key=None, file_lis
                 else:
                     data_sum = np.ndarray
                     data_copy_nan = np.ndarray  # 统计所有文件中所有点的nan值情况
+
                     for file in dic_files_list:
                         a += 1
                         i += 1
@@ -363,7 +378,7 @@ def get_data(date_start, date_end, data_path, data_type, task_key=None, file_lis
                         mon_mean_dic[dic_key] = data_copy_nan
                 if np.nan in data_sum:
                     print('=============')
-                print(dic_key, data_sum)
+                # print(dic_key, data_sum)
                 results_return[dic_key] = data_sum
     if mon_mean_dic:
         mean_len = mon_mean_dic
@@ -414,7 +429,7 @@ def get_mean(data_dic, task_key, len_get):
             for na, nu in name_dic.items():
                 if s_q_str == na:
                     s_q_list[nu].append(data)
-                s_q_list[3].append(data)
+                # s_q_list[3].append(data)
         for na, nu in name_dic.items():
             if na != 'DJF':
                 data_mean_dic[na] = np_mean(s_q_list[nu])
@@ -598,11 +613,27 @@ def data_statistics(data_type, mode_type, task_choice, date_start=None, date_end
         file_list = judge_file(date_s, date_e, data_type, task_name)
         # 获取数据 若需要使用缓存数据则检测缓存数据是否存在 不存在则生成
         data, lon, lat, len_m = get_data(date_s, date_e, data_path, data_type, task_name, file_list)
+        print('数据获取完毕')
         # 原始数据或缓存数据进行处理
         # 获取年值或逐月份多年累加值或逐季节多年累加值或逐季度多年累加值
         data_sec = data
+        print('----------')
+        for na, da in data_sec.items():
+            print(na, np.nanmean(da), np.nanmin(da), np.nanmax(da))
+        print('----------')
         # 获取相应数据的平均值
-        data_mean_dic = get_mean(data, task_name, len_m)
+        if task_choice in ['yearMean', 'monthMean',
+                           'seasonMean', 'quarterMean',
+                           'yearAnomaly', 'monthAnomaly',
+                           'seasonAnomaly', 'quarterAnomaly',
+                           ]:
+            print('开始获取均值')
+            data_mean_dic = get_mean(data, task_name, len_m)
+            print('均值获取完毕')
+            print('----------')
+            for na, da in data_mean_dic.items():
+                print(na, np.nanmean(da), np.nanmin(da), np.nanmax(da))
+            print('----------')
         if task_choice in ['yearMean',
                            'monthMean',
                            'seasonMean',
@@ -613,11 +644,20 @@ def data_statistics(data_type, mode_type, task_choice, date_start=None, date_end
                            'monthAnomaly',
                            'seasonAnomaly',
                            'quarterAnomaly', ]:
+            print('开始获取距平')
             if date_choice and date_start and date_choice:
                 file_list = judge_file(date_choice, date_choice, data_type, task_name)
                 data, lon, lat, len_m = get_data(date_choice, date_choice, data_path, data_type, task_name, file_list)
             data_sec = get_ano(task_name, data, data_mean_dic)
-
+            print('距平获取完毕')
+            print('-----da-----')
+            for na, da in data.items():
+                print(na, np.nanmean(da), np.nanmin(da), np.nanmax(da))
+            print('----------')
+            print('-----an-----')
+            for na, da in data_sec.items():
+                print(na, np.nanmean(da), np.nanmin(da), np.nanmax(da))
+            print('----------')
         # 通过范围筛选数据
         if mode_type == mode_type_list[0]:
             if type(left_longitude) == str:
@@ -628,7 +668,6 @@ def data_statistics(data_type, mode_type, task_choice, date_start=None, date_end
             col = col - 1
             data_thr = {}
             for ke_na, da in data_sec.items():
-                da[np.isnan(da)] = -9999
                 data_thr[ke_na] = da[(row, col)]
 
             final_data = (data_thr, lon[(row, col)], lat[(row, col)])
@@ -780,6 +819,8 @@ if __name__ == '__main__':
     python3 a04_data_statistics.py -t GHI -m cn -c yearMean -s 2019 -e 2019 
     python3 a04_data_statistics.py -t GHI -m cn -c yearAnomaly -s 2019 -e 2019 
     python3 a04_data_statistics.py -t GHI -m all -c yearAnomaly -s 2019 -e 2019 
+    python3 a04_data_statistics.py -t H0 -m all  -c yearSum -s 2019 -e 2019 -g true
     python3 a04_data_statistics.py -t GHI -m cn -c yearMean -s 2019 -e 2019 -g True
     python3 a04_data_statistics.py -t GHI -m all  -c yearSum -s 2019 -e 2019 -g true
+    python3 a04_data_statistics.py -t GTI -m all  -c yearMean -s 2009 -e 2018 -g true
     '''
