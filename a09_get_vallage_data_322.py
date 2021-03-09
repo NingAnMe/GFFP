@@ -11,11 +11,8 @@ ____个省份2019年太阳能资源偏高，
 """
 import argparse
 import numpy as np
-import pandas as pd
 import json
 
-from utils.model import Village
-from utils.config import POOR_XLSX
 from a04_data_statistics import num_point
 
 
@@ -66,10 +63,10 @@ if __name__ == '__main__':
 
     result = {
         'month_max': month_max,
-        'value_max': round(value_max[0], 2),
+        'value_max': round(value_max[0], 1),
 
         'month_min': month_min,
-        'value_min': round(value_min[0], 2),
+        'value_min': round(value_min[0], 1),
     }
 
     print('finish{}'.format(json.dumps(result)))

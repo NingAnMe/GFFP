@@ -70,12 +70,12 @@ if __name__ == '__main__':
         idx_max = np.argmax(value)
         v31_high_count = len(np.where(value > 0)[0])
         v31_high_province = sheng[idx_max]
-        v31_high_max = round(value[idx_max], 2)
+        v31_high_max = round(value[idx_max], 1)
 
         idx_min = np.argmin(value)
         v31_low_count = len(np.where(value < 0)[0])
         v31_low_province = sheng[idx_min]
-        v31_low_min = round(value[idx_min], 2)
+        v31_low_min = round(value[idx_min], 1)
 
         result = {
             'provincehighcount': v31_high_count,
