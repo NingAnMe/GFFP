@@ -230,6 +230,10 @@ def plot_histogram(
     print('>>> {}'.format(out_file))
 
 
+def insert_n(s: str):
+    return '\n'.join([i for i in s])
+
+
 def plot_bar(
         x,
         y,
@@ -261,8 +265,14 @@ def plot_bar(
     # 画柱状图
     sns.set_style("whitegrid")
 
-    ax1.bar(x, y, label='历年值')
-    ax1.tick_params(axis='x', rotation=270)
+    if data_type == 'province':  # 如果是省份，才会旋转x轴文字
+        x_list = x.tolist()
+        x_labels = list()
+        for i in x_list:
+            x_labels.append(insert_n(i))
+        ax1.bar(x, y, tick_label=x_labels)
+    else:
+        ax1.bar(x, y, label='历年值')
     # 画平均线
     if mean_line:
         mean = np.mean(y[:-1])
