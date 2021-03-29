@@ -20,6 +20,8 @@ import numpy as np
 import pandas as pd
 from scipy import interpolate
 
+import idw
+
 PI = 3.1415926
 E = 1366.1
 
@@ -364,6 +366,80 @@ def drop_fillvalue(data_month):
     return data_month
 
 
+def distance(p, pi):
+    import math
+    dis = (p[0] - pi[0]) * (p[0] - pi[0]) * math.cos(pi[1] * 3.14159 / 180) * math.cos(pi[1] * 3.14159 / 180) + (p[1] - pi[1]) * (p[1] - pi[1])
+    m_result = math.sqrt(dis)
+    return m_result
+
+
+def FanJuLi_interpolation(lon, lat, lst):
+    """
+    https://mathlab.github.io/PyGeM/idw.html
+    https://github.com/paulbrodersen/inverse_distance_weighting
+    :param lon:
+    :param lat:
+    :param lst:
+    :return:
+    """
+    # lon和lat分别是要插值的点的x,y
+    # lst是已有数据的数组，结构为：[[x1，y1，z1]，[x2，y2，z2]，...]
+    # 返回值是插值点的高程
+    import copy
+    import math
+    p0 = [lon, lat]
+    sum0 = 0
+    sum1 = 0
+    P = 2
+    temp0 = np.zeros((len(lst), 4))
+    # js = 0
+    for L in range(len(lst)):
+        if lon == lst[L][0] and lat == lst[L][1]:
+            return lat == lst[L][2]
+        Di = distance(p0, [lst[L][0], lst[L][1]])
+        temp0[L, :3] = lst[L]
+        temp0[L, 3] = Di
+        # a = 1
+        # js += 1
+
+    temp = copy.deepcopy(temp0)
+    temp1 = sorted(temp, key=lambda point: point[3])
+
+    for point in temp1[0:21]:
+        # print(point)
+        sum0 += point[2] / math.pow(point[3], P)
+        sum1 += 1 / math.pow(point[3], P)
+    return sum0 / sum1
+
+
+def FanJuLi_grid_data(datas, lons_grid, lats_grid, data_name):
+    lst = datas[['lon', 'lat', data_name]].to_numpy().tolist()
+    data_grid = np.asarray(lons_grid)
+    shape = lons_grid.shape
+    count = 0
+    now = datetime.now()
+    for i in range(shape[0]):
+        for j in range(shape[1]):
+            data_grid[i, j] = FanJuLi_interpolation(lons_grid[i, j], lats_grid[i, j], lst)
+            count += 1
+            if count % 10000 == 0:
+                print(count, datetime.now() - now)
+    return data_grid
+
+
+def idw_insert(datas, lons_grid, lats_grid, data_name):
+    lon_lat = datas[['lon', 'lat']].to_numpy()
+    value = datas[data_name].to_numpy()
+    idw_tree = idw.tree(lon_lat, value)
+    shape = lons_grid.shape
+    lons_grid = lons_grid.reshape(-1, 1)
+    lats_grid = lats_grid.reshape(-1, 1)
+    lons_lats = np.concatenate((lons_grid, lats_grid), axis=1)
+    values = idw_tree(lons_lats, 21)
+    values = values.reshape(shape)
+    return values
+
+
 def cal_1km(date_min, date_max):
     date_tmp = date_min
     demloder = DemLoader()
@@ -389,7 +465,9 @@ def cal_1km(date_min, date_max):
                 print('already exist {}'.format(out_file))
                 continue
 
-            data_grid = grid_data(data_month, lons_grid, lats_grid, data_name)
+            print(datetime.now())
+            data_grid = idw_insert(data_month, lons_grid, lats_grid, data_name)
+            print(datetime.now())
 
             pro_mask_data = get_hdf5_data(PRO_MASK_HDF, 'province_mask', 1, 0, [0, 255], 0)
             data_grid[pro_mask_data == 0] = np.nan
@@ -482,7 +560,7 @@ if __name__ == '__main__':
     print_config()
     print('stationSolarFile == {}'.format(args.stationSolarFile))
 
-    if os.path.isfile(args.stationSolarFile):
+    if args.stationSolarFile is not None and os.path.isfile(args.stationSolarFile):
         print('开始计算光伏参数')
         date_min_date_max = cal_stations(args.stationSolarFile)
 
