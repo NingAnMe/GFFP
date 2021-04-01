@@ -127,7 +127,11 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+# idea
 .idea/
+.vscode/
+.history/
+
 test/
 no2_plot.py
 tmp_a01_create_link.py
